@@ -1,3 +1,9 @@
-main.c
+*.c
 .vscode
 *.pdf
+test*
+qoi
+loaded_qoi.png
+stb_image_write.h
+stb_image.h
+main
