@@ -64,12 +64,12 @@ typedef struct {
 typedef struct {
     uint32_t count;
     uint32_t capacity;
-    qoi_rgba    *items;
+    qoi_rgba *items;
 } qoi_rgbas;
 
 typedef struct {
     qoi_header header;
-    qoi_rgbas     image_data;
+    qoi_rgbas  image_data;
 } qoi_image;
 
 uint8_t qoi_hash(qoi_rgba *color);
@@ -133,40 +133,39 @@ bool qoi_load_image_data(int fd, qoi_image* image) {
     }
 
     qoi_rgba lookup_array[64] = {0};
-    qoi_rgba cur_px  = { 0, 0, 0, 255 };
-    qoi_rgba prev_px = cur_px;
+    qoi_rgba prev_px = { 0, 0, 0, 255 };
 
     for (;image->image_data.count < image->header.width * image->header.height; data++) {
         lookup_array[qoi_hash(&prev_px)] = prev_px;
 
         if (*data == RGBA) {
-            cur_px.r = *++data;
-            cur_px.g = *++data;
-            cur_px.b = *++data;
-            cur_px.a = *++data;
+            prev_px.r = *++data;
+            prev_px.g = *++data;
+            prev_px.b = *++data;
+            prev_px.a = *++data;
         }
         else if (*data == RGB) {
-            cur_px.r = *++data;
-            cur_px.g = *++data;
-            cur_px.b = *++data;
+            prev_px.r = *++data;
+            prev_px.g = *++data;
+            prev_px.b = *++data;
         }
         else if ((*data & 0b11000000) == INDEX) {
             uint8_t index = 0b00111111 & *data;
-            cur_px = lookup_array[index];
+            prev_px = lookup_array[index];
         }
         else if ((*data & 0b11000000) == DIFF) {
-            cur_px.r = prev_px.r + ((*data >> 4) & 0b00000011) - 2;
-            cur_px.g = prev_px.g + ((*data >> 2) & 0b00000011) - 2;
-            cur_px.b = prev_px.b + (*data & 0b00000011) - 2;
+            prev_px.r += ((*data >> 4) & 0b00000011) - 2;
+            prev_px.g += ((*data >> 2) & 0b00000011) - 2;
+            prev_px.b += (*data & 0b00000011)        - 2;
         }
         else if ((*data & 0b11000000) == LUMA) {
-            int8_t dg = (*data++ & 0b00111111) - 32;
+            int8_t dg    = (*data++ & 0b00111111)    - 32;
             int8_t dr_dg = (*data >> 4 & 0b00001111) - 8;
-            int8_t db_dg = (*data & 0b00001111) - 8;
+            int8_t db_dg = (*data & 0b00001111)      - 8;
 
-            cur_px.r = prev_px.r + dr_dg + dg;
-            cur_px.g = prev_px.g + dg;
-            cur_px.b = prev_px.b + db_dg + dg;
+            prev_px.r += dr_dg + dg;
+            prev_px.g += dg;
+            prev_px.b += db_dg + dg;
         }
         else if ((*data & 0b11000000) == RUN) {
             uint8_t times = (*data & 0b00111111);
@@ -176,8 +175,7 @@ bool qoi_load_image_data(int fd, qoi_image* image) {
             continue;
         }
         
-        qoi_da_append(&image->image_data, cur_px);
-        prev_px = cur_px;
+        qoi_da_append(&image->image_data, prev_px);
     }
     
     return true;
