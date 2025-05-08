@@ -35,6 +35,7 @@
     } while (0)
 
 #define qoi_write_image_from_header(filepath, header, pixels) qoi_write_image(filepath, header.width, header.height, header.chanels, header.colorspace, pixels)
+#define qoi_write_image_from_qoi_image(filepath, image) qoi_write_image_from_header(filepath, image.header, image.image_data.items)
 
 typedef enum {
     INDEX = 0b00000000,
@@ -74,12 +75,11 @@ typedef struct {
 
 uint8_t qoi_hash(qoi_rgba *color);
 void *qoi_change_byte_order(void *b, const size_t size);
-int qoi_load_image_header(int fd, qoi_image *image);
-int qoi_load_image_data(int fd, qoi_image *image);
-int qoi_load_image(const char *filepath, qoi_image *image);
+bool qoi_load_image_header(int fd, qoi_image *image);
+bool qoi_load_image_data(int fd, qoi_image *image);
+bool qoi_load_image(const char *filepath, qoi_image *image);
 void qoi_free_image(qoi_image *image);
-int qoi_write_image_from_qoi(const char *filepath, qoi_image image);
-int qoi_write_image(const char *filepath, uint32_t width, uint32_t height, uint8_t chanels, uint8_t colorspace, Pixel *pixels);
+bool qoi_write_image(const char *filepath, uint32_t width, uint32_t height, uint8_t chanels, uint8_t colorspace, Pixel *pixels);
 
 #endif // QOI_HEADER
 #ifdef QOI_IMPLEMENTATION
@@ -99,22 +99,22 @@ void *qoi_change_byte_order(void *b, const size_t size) {
     return b;
 }
 
-int qoi_load_image_header(int fd, qoi_image* image) {
+bool qoi_load_image_header(int fd, qoi_image* image) {
     if (read(fd, &image->header, QOI_HEADER_SIZE) != QOI_HEADER_SIZE) {
-        return -1;
+        return false;
     }
 
     if (memcmp(image->header.magic, QOI_MAGIC, 4) != 0) {
-        return -1;
+        return false;
     }
 
     qoi_change_byte_order(&image->header.width, sizeof(image->header.width));
     qoi_change_byte_order(&image->header.height, sizeof(image->header.height));
 
-    return 0;
+    return true;
 }
 
-int qoi_load_image_data(int fd, qoi_image* image) {
+bool qoi_load_image_data(int fd, qoi_image* image) {
     const long data_size = lseek(fd, 0, SEEK_END) - QOI_HEADER_SIZE - QOI_END_SIZE;
     uint8_t* data = (uint8_t*)malloc(data_size+1);
     memset(data, 0, data_size+1);
@@ -122,16 +122,15 @@ int qoi_load_image_data(int fd, qoi_image* image) {
     lseek(fd, QOI_HEADER_SIZE, SEEK_SET);
     int data_read_count = read(fd, data, data_size);
     if (data_read_count < data_size) {
-        return -1;
+        return false;
     }
 
     uint8_t end[QOI_END_SIZE];
-    int end_read_count = read(fd, end, QOI_END_SIZE);
-    if (QOI_END_SIZE > end_read_count) {
-        return -1;
+    if (QOI_END_SIZE > read(fd, end, QOI_END_SIZE)) {
+        return false;
     }
-    if (memcmp(QOI_END, end, QOI_END_SIZE)) {
-        return -1;
+    if (0 != memcmp(QOI_END, end, QOI_END_SIZE)) {
+        return false;
     }
 
     Pixel lookup_array[64] = {0};
@@ -181,22 +180,22 @@ int qoi_load_image_data(int fd, qoi_image* image) {
         qoi_da_append(&image->image_data, cur_px);
         prev_px = cur_px;
     }
-
-    return 0;
+    
+    return true;
 }
 
-int qoi_load_image(const char* filepath, qoi_image* image) {
+bool qoi_load_image(const char* filepath, qoi_image* image) {
     int fd = open(filepath, O_RDONLY);
 
     if (-1 == fd) {
         fprintf(stderr, "[ERROR]: Couldn't open file!\n");
         goto error;
     }
-    if (-1 == qoi_load_image_header(fd, image)) {
+    if (!qoi_load_image_header(fd, image)) {
         fprintf(stderr, "[ERROR]: Incorrect header data!\n");
         goto error;
     }
-    if (-1 == qoi_load_image_data(fd, image)) {
+    if (!qoi_load_image_data(fd, image)) {
         fprintf(stderr, "[ERROR]: Incorrect image data!\n");
         goto error;
     }
@@ -206,22 +205,18 @@ int qoi_load_image(const char* filepath, qoi_image* image) {
     }
     
     close(fd);
-    return 0;
+    return true;
 
 error:
     close(fd);
-    return -1;
+    return false;
 }
 
 void qoi_free_image(qoi_image* image) {
     free(image->image_data.items);
 }
 
-int qoi_write_image_from_qoi(const char* filepath, qoi_image image){
-    return qoi_write_image_from_header(filepath, image.header, image.image_data.items);
-}
-
-int qoi_write_image(const char* filepath, uint32_t width, uint32_t height, uint8_t chanels, uint8_t colorspace, Pixel* pixels) {
+bool qoi_write_image(const char* filepath, uint32_t width, uint32_t height, uint8_t chanels, uint8_t colorspace, Pixel* pixels) {
     int fd = open(filepath, O_WRONLY | O_CREAT | O_TRUNC);
 
     if (-1 == fd) {
@@ -234,57 +229,64 @@ int qoi_write_image(const char* filepath, uint32_t width, uint32_t height, uint8
     write(fd, qoi_change_byte_order(&height, sizeof(height)), sizeof(height));
     write(fd, &chanels, sizeof(chanels));
     write(fd, &colorspace, sizeof(colorspace));
-
+    
+    qoi_change_byte_order(&width, sizeof(width));
+    qoi_change_byte_order(&height, sizeof(height));
+    
     Pixel lookup_array[64] = {0};
     Pixel prev_px = { 0, 0, 0, 255 };
-    uint8_t same_pixel = RUN;
-
+    
     uint8_t type;
-    for (size_t i = 0; i < width * height; i++, pixels++) {
+    for (size_t i = 0; i < width * height; ++i) {
         uint8_t hash = qoi_hash(pixels);
-        lookup_array[hash] = prev_px;
 
         // RUN
         type = RUN;
-        if (same_pixel == RGB) {
-            same_pixel--;
-            write(fd, &same_pixel, 1);
-            same_pixel = RUN + 1;
+        uint8_t same = 0;
+        while (0 == memcmp(pixels, &prev_px, sizeof(Pixel)))
+        {
+            pixels++;
+            same++;
+            i++;
+            if (same == 62) {
+                type |= same - 1;
+                write(fd, &type, 1);
+                lookup_array[hash] = prev_px;
+                type = RUN;
+                same = 0;
+            }
         }
-        if (memcmp(pixels, pixels, sizeof(Pixel))) {
-            same_pixel++;
+        if (0 != same) {
+            type |= same - 1;
+            write(fd, &type, 1);
+            lookup_array[hash] = prev_px;
             continue;
-        }
-        else {
-            write(fd, &same_pixel, 1);
-            same_pixel = RUN; 
         }
 
         int8_t dr = pixels->r - prev_px.r;
         int8_t dg = pixels->g - prev_px.g;
         int8_t db = pixels->b - prev_px.b;
         int8_t dr_dg = dr - dg;
-        int8_t dr_db = dr - db;
+        int8_t db_dg = db - dg;
 
         // INDEX
-        if (memcmp(&lookup_array[hash], pixels, sizeof(Pixel))) {
+        if (0 == memcmp(&lookup_array[hash], pixels, sizeof(Pixel))) {
             type = INDEX;
             write(fd, &hash, 1);
         }
         // DIFF
-        else if (-2 <= dr && dr <= 1 && -2 <= dg && dg <= 1 && -2 <= db && db <= 1) {
-            type = DIFF;
-            uint8_t diff = DIFF & (dr + 2) << 4 & (dg + 2) << 2 & (db + 2);
-            write(fd, &diff, 1);
+        else if (-2 <= dr && dr <= 1 && -2 <= dg && dg <= 1 && -2 <= db && db <= 1 && pixels->a == prev_px.a) {
+            type = DIFF | (dr + 2) << 4 | (dg + 2) << 2 | (db + 2);
+            write(fd, &type, 1);
         }
         // LUMA
-        else if (-32 <= dr && dr <= 31 && -8 <= dr_dg && dr_dg <= 7 && -8 <= dr_db && dr_db <= 7) {
+        else if (-32 <= dr && dr <= 31 && -8 <= dr_dg && dr_dg <= 7 && -8 <= db_dg && db_dg <= 7 && pixels->a == prev_px.a) {
             type = LUMA;
-            uint8_t luma[2] = { LUMA & (dr + 32), dr_dg << 4 & dr_db };
+            uint8_t luma[2] = { LUMA | (dr + 32), (dr_dg + 8) << 4 | (db_dg + 8) };
             write(fd, luma, 2);
         }
         // RGB
-        else if (chanels == 3) {
+        else if (pixels->a == prev_px.a) {
             type = RGB;
             write(fd, &type, 1);
             write(fd, pixels, 3);
@@ -296,15 +298,16 @@ int qoi_write_image(const char* filepath, uint32_t width, uint32_t height, uint8
             write(fd, pixels, 4);
         }
 
-        prev_px = *pixels;
+        prev_px = *pixels++;
+        lookup_array[hash] = prev_px;
     }
 
     write(fd, QOI_END, QOI_END_SIZE);
     close(fd);
-    return 0;
+    return true;
 error:
     close(fd);
-    return -1;
+    return false;
 }
 
 #endif // QOI_IMPLEMENTATION
