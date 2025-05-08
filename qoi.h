@@ -61,16 +61,15 @@ typedef struct {
     uint8_t a;
 } qoi_rgba;
 
-typedef qoi_rgba Pixel;
 typedef struct {
     uint32_t count;
     uint32_t capacity;
-    Pixel    *items;
-} Pixels;
+    qoi_rgba    *items;
+} qoi_rgbas;
 
 typedef struct {
     qoi_header header;
-    Pixels     image_data;
+    qoi_rgbas     image_data;
 } qoi_image;
 
 uint8_t qoi_hash(qoi_rgba *color);
@@ -79,7 +78,7 @@ bool qoi_load_image_header(int fd, qoi_image *image);
 bool qoi_load_image_data(int fd, qoi_image *image);
 bool qoi_load_image(const char *filepath, qoi_image *image);
 void qoi_free_image(qoi_image *image);
-bool qoi_write_image(const char *filepath, uint32_t width, uint32_t height, uint8_t chanels, uint8_t colorspace, Pixel *pixels);
+bool qoi_write_image(const char *filepath, uint32_t width, uint32_t height, uint8_t chanels, uint8_t colorspace, qoi_rgba *pixels);
 
 #endif // QOI_HEADER
 #ifdef QOI_IMPLEMENTATION
@@ -133,9 +132,9 @@ bool qoi_load_image_data(int fd, qoi_image* image) {
         return false;
     }
 
-    Pixel lookup_array[64] = {0};
-    Pixel cur_px  = { 0, 0, 0, 255 };
-    Pixel prev_px = cur_px;
+    qoi_rgba lookup_array[64] = {0};
+    qoi_rgba cur_px  = { 0, 0, 0, 255 };
+    qoi_rgba prev_px = cur_px;
 
     for (;image->image_data.count < image->header.width * image->header.height; data++) {
         lookup_array[qoi_hash(&prev_px)] = prev_px;
@@ -216,7 +215,7 @@ void qoi_free_image(qoi_image* image) {
     free(image->image_data.items);
 }
 
-bool qoi_write_image(const char* filepath, uint32_t width, uint32_t height, uint8_t chanels, uint8_t colorspace, Pixel* pixels) {
+bool qoi_write_image(const char* filepath, uint32_t width, uint32_t height, uint8_t chanels, uint8_t colorspace, qoi_rgba* pixels) {
     int fd = open(filepath, O_WRONLY | O_CREAT | O_TRUNC);
 
     if (-1 == fd) {
@@ -233,8 +232,8 @@ bool qoi_write_image(const char* filepath, uint32_t width, uint32_t height, uint
     qoi_change_byte_order(&width, sizeof(width));
     qoi_change_byte_order(&height, sizeof(height));
     
-    Pixel lookup_array[64] = {0};
-    Pixel prev_px = { 0, 0, 0, 255 };
+    qoi_rgba lookup_array[64] = {0};
+    qoi_rgba prev_px = { 0, 0, 0, 255 };
     
     uint8_t type;
     for (size_t i = 0; i < width * height; ++i) {
@@ -243,7 +242,7 @@ bool qoi_write_image(const char* filepath, uint32_t width, uint32_t height, uint
         // RUN
         type = RUN;
         uint8_t same = 0;
-        while (0 == memcmp(pixels, &prev_px, sizeof(Pixel)))
+        while (0 == memcmp(pixels, &prev_px, sizeof(qoi_rgba)))
         {
             pixels++;
             same++;
@@ -270,7 +269,7 @@ bool qoi_write_image(const char* filepath, uint32_t width, uint32_t height, uint
         int8_t db_dg = db - dg;
 
         // INDEX
-        if (0 == memcmp(&lookup_array[hash], pixels, sizeof(Pixel))) {
+        if (0 == memcmp(&lookup_array[hash], pixels, sizeof(qoi_rgba))) {
             type = INDEX;
             write(fd, &hash, 1);
         }
