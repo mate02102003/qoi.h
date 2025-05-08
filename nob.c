@@ -2,8 +2,8 @@
 #define NOB_STRIP_PREFIX
 #include "nob.h"
 
-#define BUILD_FOLDER "/build"
-#define SOURCE_FOLDER "/src"
+#define BUILD_FOLDER "build/"
+#define SOURCE_FOLDER "src/"
 
 bool build_target_sync(Cmd *cmd, const char *target, const char *output) {
     cmd_append(cmd, "cc");
@@ -11,10 +11,11 @@ bool build_target_sync(Cmd *cmd, const char *target, const char *output) {
     cmd_append(cmd, "-o", output);
     cmd_append(cmd, "-Wall", "-Wextra");
     cmd_append(cmd, "-O3");
+    cmd_append(cmd, "-lm");
 
     if (!cmd_run_sync_and_reset(cmd)) return false;
 
-    return 0;
+    return true;
 }
 
 int main(int argc, char **argv) {

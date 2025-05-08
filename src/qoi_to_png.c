@@ -1,5 +1,6 @@
 #define QOI_IMPLEMENTATION
 #include "../qoi.h"
+#define FLAG_IMPLEMENTATION
 #include "../thirdparty/flag.h"
 #define STB_IMAGE_WRITE_IMPLEMENTATION
 #include "../thirdparty/stb_image_write.h"
