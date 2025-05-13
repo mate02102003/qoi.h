@@ -21,7 +21,7 @@
 #define QOI_END (uint8_t[]) { 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x01 }
 
 #ifndef QOI_DA_INIT_CAP
-#define QOI_DA_INIT_CAP 256
+#define QOI_DA_INIT_CAP 65536U
 #endif
 
 #define qoi_da_append(da, item)                                                          \
@@ -217,7 +217,7 @@ bool qoi_write_image(const char* filepath, uint32_t width, uint32_t height, uint
     int fd = open(filepath, O_WRONLY | O_CREAT | O_TRUNC);
 
     if (-1 == fd) {
-        fprintf(stderr, "[ERROR]: %s: %s\n", "Couldn't open file", filepath);
+        fprintf(stderr, "[ERROR]: Couldn't open file: %s\n", filepath);
         goto error;
     }
 
