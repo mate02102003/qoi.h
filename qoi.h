@@ -227,7 +227,7 @@ bool qoi_write_image(const char* filepath, uint32_t width, uint32_t height, uint
 
     if (NULL == fd) {
         fprintf(stderr, "[ERROR]: Couldn't open file: %s\n", filepath);
-        goto error;
+        return false;
     }
 
     fwrite(QOI_MAGIC, strlen(QOI_MAGIC), 1, fd);
@@ -295,9 +295,6 @@ bool qoi_write_image(const char* filepath, uint32_t width, uint32_t height, uint
     fwrite(QOI_END, QOI_END_SIZE, 1, fd);
     fclose(fd);
     return true;
-error:
-    fclose(fd);
-    return false;
 }
 
 #endif // QOI_IMPLEMENTATION
