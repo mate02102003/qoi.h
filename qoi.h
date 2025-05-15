@@ -195,7 +195,7 @@ bool qoi_load_image(const char* filepath, qoi_image* image) {
 
     if (NULL == fd) {
         fprintf(stderr, "[ERROR]: Couldn't open file!\n");
-        goto error;
+        return false;
     }
     if (!qoi_load_image_header(fd, image)) {
         fprintf(stderr, "[ERROR]: Incorrect header data!\n");
