@@ -93,11 +93,13 @@ void *qoi_change_byte_order(void *b, const size_t size) {
 }
 
 bool qoi_load_image_header(FILE *fd, qoi_image* image) {
-    if (fread(&image->header, QOI_HEADER_SIZE, 1, fd) != QOI_HEADER_SIZE) {
+    if (fread(&image->header, QOI_HEADER_SIZE, 1, fd) != 1) {
+        fprintf(stderr, "[ERROR]: Incorrect header read size!\n");
         return false;
     }
-
+    
     if (memcmp(image->header.magic, QOI_MAGIC, 4) != 0) {
+        fprintf(stderr, "[ERROR]: Incorrect magic!\n");
         return false;
     }
 
@@ -108,21 +110,34 @@ bool qoi_load_image_header(FILE *fd, qoi_image* image) {
 }
 
 bool qoi_load_image_data(FILE *fd, qoi_image* image) {
-    const int data_size = fseek(fd, 0, SEEK_END) - QOI_HEADER_SIZE - QOI_END_SIZE;
-    uint8_t *data = (uint8_t*)malloc(data_size+1);
-    memset(data, 0, data_size+1);
-
-    fseek(fd, QOI_HEADER_SIZE, SEEK_SET);
-    int data_read_count = fread(data, data_size, 1, fd);
-    if (data_read_count < data_size) {
+    if (fseek(fd, 0, SEEK_END) < 0) {
+        fprintf(stderr, "[ERROR]: Couldn't jump to end of file!\n");
         return false;
     }
-
+    const size_t data_size = ftell(fd) - QOI_HEADER_SIZE - QOI_END_SIZE;
+    uint8_t *data = (uint8_t*)malloc(data_size);
+    
+    if (data == NULL) {
+        fprintf(stderr, "[ERROR]: Couldn't allocate space for data (size: %zu)!\n", data_size);
+        return false;
+    }
+    memset(data, 0, data_size);
+    
+    fseek(fd, QOI_HEADER_SIZE, SEEK_SET);
+    size_t data_read_count = fread(data, 1, data_size, fd);
+    if (data_read_count < data_size) {
+        fprintf(stderr, "[ERROR]: Read data size (%zu) doesn't match seeked size (%zu)!\n", data_read_count, data_size);
+        return false;
+    }
+    
     uint8_t end[QOI_END_SIZE];
-    if (QOI_END_SIZE > fread(end, QOI_END_SIZE, 1, fd)) {
+    size_t read_end_size = fread(end, 1, QOI_END_SIZE, fd);
+    if (QOI_END_SIZE > read_end_size) {
+        fprintf(stderr, "[ERROR]: Read end size (%zu) doesn't match expected end size (%u)!\n", read_end_size, QOI_END_SIZE);
         return false;
     }
     if (0 != memcmp(QOI_END, end, QOI_END_SIZE)) {
+        fprintf(stderr, "[ERROR]: Incorrect end magic!\n");
         return false;
     }
 
@@ -176,7 +191,7 @@ bool qoi_load_image_data(FILE *fd, qoi_image* image) {
 }
 
 bool qoi_load_image(const char* filepath, qoi_image* image) {
-    FILE *fd = fopen(filepath, "r");
+    FILE *fd = fopen(filepath, "rb");
 
     if (NULL == fd) {
         fprintf(stderr, "[ERROR]: Couldn't open file!\n");
@@ -208,7 +223,7 @@ void qoi_free_image(qoi_image* image) {
 }
 
 bool qoi_write_image(const char* filepath, uint32_t width, uint32_t height, uint8_t chanels, uint8_t colorspace, qoi_rgba* pixels) {
-    FILE *fd = fopen(filepath, "w");
+    FILE *fd = fopen(filepath, "wb");
 
     if (NULL == fd) {
         fprintf(stderr, "[ERROR]: Couldn't open file: %s\n", filepath);
