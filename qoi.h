@@ -4,13 +4,6 @@
 #include <stdint.h>
 #include <stdbool.h>
 #include <string.h>
-#include <fcntl.h>
-
-#ifdef _WIN32
-#include <io.h>
-#else
-#include <unistd.h>
-#endif
 
 #ifndef QOI_H_
 #define QOI_H_
@@ -30,7 +23,6 @@
             (da)->capacity = (da)->capacity == 0 ? QOI_DA_INIT_CAP : (da)->capacity*2;   \
             (da)->items = realloc((da)->items, (da)->capacity*sizeof(*(da)->items));     \
         }                                                                                \
-                                                                                         \
         (da)->items[(da)->count++] = (item);                                             \
     } while (0)
 
@@ -76,8 +68,8 @@ typedef struct {
 
 uint8_t qoi_hash(qoi_rgba *color);
 void *qoi_change_byte_order(void *b, const size_t size);
-bool qoi_load_image_header(int fd, qoi_image *image);
-bool qoi_load_image_data(int fd, qoi_image *image);
+bool qoi_load_image_header(FILE *fd, qoi_image *image);
+bool qoi_load_image_data(FILE *fd, qoi_image *image);
 bool qoi_load_image(const char *filepath, qoi_image *image);
 void qoi_free_image(qoi_image *image);
 bool qoi_write_image(const char *filepath, uint32_t width, uint32_t height, uint8_t chanels, uint8_t colorspace, qoi_rgba *pixels);
@@ -100,8 +92,8 @@ void *qoi_change_byte_order(void *b, const size_t size) {
     return b;
 }
 
-bool qoi_load_image_header(int fd, qoi_image* image) {
-    if (read(fd, &image->header, QOI_HEADER_SIZE) != QOI_HEADER_SIZE) {
+bool qoi_load_image_header(FILE *fd, qoi_image* image) {
+    if (fread(&image->header, QOI_HEADER_SIZE, 1, fd) != QOI_HEADER_SIZE) {
         return false;
     }
 
@@ -115,19 +107,19 @@ bool qoi_load_image_header(int fd, qoi_image* image) {
     return true;
 }
 
-bool qoi_load_image_data(int fd, qoi_image* image) {
-    const long data_size = lseek(fd, 0, SEEK_END) - QOI_HEADER_SIZE - QOI_END_SIZE;
-    uint8_t* data = (uint8_t*)malloc(data_size+1);
+bool qoi_load_image_data(FILE *fd, qoi_image* image) {
+    const int data_size = fseek(fd, 0, SEEK_END) - QOI_HEADER_SIZE - QOI_END_SIZE;
+    uint8_t *data = (uint8_t*)malloc(data_size+1);
     memset(data, 0, data_size+1);
 
-    lseek(fd, QOI_HEADER_SIZE, SEEK_SET);
-    int data_read_count = read(fd, data, data_size);
+    fseek(fd, QOI_HEADER_SIZE, SEEK_SET);
+    int data_read_count = fread(data, data_size, 1, fd);
     if (data_read_count < data_size) {
         return false;
     }
 
     uint8_t end[QOI_END_SIZE];
-    if (QOI_END_SIZE > read(fd, end, QOI_END_SIZE)) {
+    if (QOI_END_SIZE > fread(end, QOI_END_SIZE, 1, fd)) {
         return false;
     }
     if (0 != memcmp(QOI_END, end, QOI_END_SIZE)) {
@@ -184,9 +176,9 @@ bool qoi_load_image_data(int fd, qoi_image* image) {
 }
 
 bool qoi_load_image(const char* filepath, qoi_image* image) {
-    int fd = open(filepath, O_RDONLY);
+    FILE *fd = fopen(filepath, "r");
 
-    if (-1 == fd) {
+    if (NULL == fd) {
         fprintf(stderr, "[ERROR]: Couldn't open file!\n");
         goto error;
     }
@@ -203,11 +195,11 @@ bool qoi_load_image(const char* filepath, qoi_image* image) {
         goto error;
     }
     
-    close(fd);
+    fclose(fd);
     return true;
 
 error:
-    close(fd);
+    fclose(fd);
     return false;
 }
 
@@ -216,18 +208,18 @@ void qoi_free_image(qoi_image* image) {
 }
 
 bool qoi_write_image(const char* filepath, uint32_t width, uint32_t height, uint8_t chanels, uint8_t colorspace, qoi_rgba* pixels) {
-    int fd = open(filepath, O_WRONLY | O_CREAT | O_TRUNC);
+    FILE *fd = fopen(filepath, "w");
 
-    if (-1 == fd) {
+    if (NULL == fd) {
         fprintf(stderr, "[ERROR]: Couldn't open file: %s\n", filepath);
         goto error;
     }
 
-    write(fd, QOI_MAGIC, strlen(QOI_MAGIC));
-    write(fd, qoi_change_byte_order(&width, sizeof(width)), sizeof(width));
-    write(fd, qoi_change_byte_order(&height, sizeof(height)), sizeof(height));
-    write(fd, &chanels, sizeof(chanels));
-    write(fd, &colorspace, sizeof(colorspace));
+    fwrite(QOI_MAGIC, strlen(QOI_MAGIC), 1, fd);
+    fwrite(qoi_change_byte_order(&width, sizeof(width)), sizeof(width), 1, fd);
+    fwrite(qoi_change_byte_order(&height, sizeof(height)), sizeof(height), 1, fd);
+    fwrite(&chanels, sizeof(chanels), 1, fd);
+    fwrite(&colorspace, sizeof(colorspace), 1, fd);
     
     qoi_change_byte_order(&width, sizeof(width));
     qoi_change_byte_order(&height, sizeof(height));
@@ -244,20 +236,20 @@ bool qoi_write_image(const char* filepath, uint32_t width, uint32_t height, uint
         if (0 == memcmp(pixels, &prev_px, sizeof(qoi_rgba))) { // RUN
             for (type = RUN - 1;pixels < pixels_end && 0 == memcmp(pixels, &prev_px, sizeof(qoi_rgba)); ++type, ++pixels) {
                 if (type == RGB - 1) {
-                    write(fd, &type, sizeof(type));
+                    fwrite(&type, sizeof(type), 1, fd);
                     type = RUN - 1;
                 }
             }
-            write(fd, &type, sizeof(type));
+            fwrite(&type, sizeof(type), 1, fd);
             --pixels;
         }
         else if (0 == memcmp(&lookup_array[hash], pixels, sizeof(qoi_rgba))) { // INDEX
-            write(fd, &hash, sizeof(hash));
+            fwrite(&hash, sizeof(hash), 1, fd);
         }
         else if (pixels->a != prev_px.a) { // RGBA
             type = RGBA;
-            write(fd, &type, sizeof(type));
-            write(fd, pixels, sizeof(qoi_rgba));
+            fwrite(&type, sizeof(type), 1, fd);
+            fwrite(pixels, sizeof(qoi_rgba), 1, fd);
         }
         else {
             dr = pixels->r - prev_px.r;
@@ -268,16 +260,16 @@ bool qoi_write_image(const char* filepath, uint32_t width, uint32_t height, uint
             
             if (qoi_between(dr, -2, 1) && qoi_between(dg, -2, 1) && qoi_between(db, -2, 1)) { // DIFF
                 type = DIFF | (dr + 2) << 4 | (dg + 2) << 2 | (db + 2);
-                write(fd, &type, sizeof(type));
+                fwrite(&type, sizeof(type), 1, fd);
             }
             else if (qoi_between(dg, -32, 31) && qoi_between(dr_dg, -8, 7) && qoi_between(db_dg, -8, 7)) { // LUMA
                 uint8_t luma[] = { LUMA | (dg + 32), (dr_dg + 8) << 4 | (db_dg + 8) };
-                write(fd, luma, sizeof(luma));
+                fwrite(luma, sizeof(luma), 1, fd);
             }
             else if (pixels->a == prev_px.a) { // RGB
                 type = RGB;
-                write(fd, &type, sizeof(type));
-                write(fd, pixels, sizeof(qoi_rgba) - sizeof(pixels->a));
+                fwrite(&type, sizeof(type), 1, fd);
+                fwrite(pixels, sizeof(qoi_rgba) - sizeof(pixels->a), 1, fd);
             }
         }
         
@@ -285,11 +277,11 @@ bool qoi_write_image(const char* filepath, uint32_t width, uint32_t height, uint
         lookup_array[hash] = prev_px;
     }
 
-    write(fd, QOI_END, QOI_END_SIZE);
-    close(fd);
+    fwrite(QOI_END, QOI_END_SIZE, 1, fd);
+    fclose(fd);
     return true;
 error:
-    close(fd);
+    fclose(fd);
     return false;
 }
 
