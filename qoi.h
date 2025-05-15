@@ -37,6 +37,8 @@
 #define qoi_write_image_from_header(filepath, header, pixels) qoi_write_image(filepath, header.width, header.height, header.chanels, header.colorspace, pixels)
 #define qoi_write_image_from_qoi_image(filepath, image) qoi_write_image_from_header(filepath, image.header, image.image_data.items)
 
+#define qoi_between(n, l, h) l <= n && n <= h // ends included
+
 typedef enum {
     INDEX = 0b00000000,
     DIFF  = 0b01000000,
@@ -232,70 +234,54 @@ bool qoi_write_image(const char* filepath, uint32_t width, uint32_t height, uint
     
     qoi_rgba lookup_array[64] = {0};
     qoi_rgba prev_px = { 0, 0, 0, 255 };
+    qoi_rgba *pixels_end = &pixels[width * height];
     
-    uint8_t type;
-    for (size_t i = 0; i < width * height; ++i) {
-        uint8_t hash = qoi_hash(pixels);
-
-        // RUN
-        type = RUN;
-        uint8_t same = 0;
-        while (0 == memcmp(pixels, &prev_px, sizeof(qoi_rgba)))
-        {
-            pixels++;
-            same++;
-            i++;
-            if (same == 62) {
-                type |= same - 1;
-                write(fd, &type, 1);
-                lookup_array[hash] = prev_px;
-                type = RUN;
-                same = 0;
+    uint8_t type, hash;
+    int8_t dr, dg, db, dr_dg, db_dg;
+    for (;pixels < pixels_end; ++pixels) {
+        hash = qoi_hash(pixels);
+        
+        if (0 == memcmp(pixels, &prev_px, sizeof(qoi_rgba))) { // RUN
+            for (type = RUN - 1;pixels < pixels_end && 0 == memcmp(pixels, &prev_px, sizeof(qoi_rgba)); ++type, ++pixels) {
+                if (type == RGB - 1) {
+                    write(fd, &type, sizeof(type));
+                    type = RUN - 1;
+                }
+            }
+            write(fd, &type, sizeof(type));
+            --pixels;
+        }
+        else if (0 == memcmp(&lookup_array[hash], pixels, sizeof(qoi_rgba))) { // INDEX
+            write(fd, &hash, sizeof(hash));
+        }
+        else if (pixels->a != prev_px.a) { // RGBA
+            type = RGBA;
+            write(fd, &type, sizeof(type));
+            write(fd, pixels, sizeof(qoi_rgba));
+        }
+        else {
+            dr = pixels->r - prev_px.r;
+            dg = pixels->g - prev_px.g;
+            db = pixels->b - prev_px.b;
+            dr_dg = dr - dg;
+            db_dg = db - dg;
+            
+            if (qoi_between(dr, -2, 1) && qoi_between(dg, -2, 1) && qoi_between(db, -2, 1)) { // DIFF
+                type = DIFF | (dr + 2) << 4 | (dg + 2) << 2 | (db + 2);
+                write(fd, &type, sizeof(type));
+            }
+            else if (qoi_between(dg, -32, 31) && qoi_between(dr_dg, -8, 7) && qoi_between(db_dg, -8, 7)) { // LUMA
+                uint8_t luma[] = { LUMA | (dg + 32), (dr_dg + 8) << 4 | (db_dg + 8) };
+                write(fd, luma, sizeof(luma));
+            }
+            else if (pixels->a == prev_px.a) { // RGB
+                type = RGB;
+                write(fd, &type, sizeof(type));
+                write(fd, pixels, sizeof(qoi_rgba) - sizeof(pixels->a));
             }
         }
-        if (0 != same) {
-            type |= same - 1;
-            write(fd, &type, 1);
-            lookup_array[hash] = prev_px;
-            continue;
-        }
-
-        int8_t dr = pixels->r - prev_px.r;
-        int8_t dg = pixels->g - prev_px.g;
-        int8_t db = pixels->b - prev_px.b;
-        int8_t dr_dg = dr - dg;
-        int8_t db_dg = db - dg;
-
-        // INDEX
-        if (0 == memcmp(&lookup_array[hash], pixels, sizeof(qoi_rgba))) {
-            type = INDEX;
-            write(fd, &hash, 1);
-        }
-        // DIFF
-        else if (-2 <= dr && dr <= 1 && -2 <= dg && dg <= 1 && -2 <= db && db <= 1 && pixels->a == prev_px.a) {
-            type = DIFF | (dr + 2) << 4 | (dg + 2) << 2 | (db + 2);
-            write(fd, &type, 1);
-        }
-        // LUMA
-        else if (-32 <= dr && dr <= 31 && -8 <= dr_dg && dr_dg <= 7 && -8 <= db_dg && db_dg <= 7 && pixels->a == prev_px.a) {
-            type = LUMA;
-            uint8_t luma[2] = { LUMA | (dr + 32), (dr_dg + 8) << 4 | (db_dg + 8) };
-            write(fd, luma, 2);
-        }
-        // RGB
-        else if (pixels->a == prev_px.a) {
-            type = RGB;
-            write(fd, &type, 1);
-            write(fd, pixels, 3);
-        }
-        // RGBA
-        else {
-            type = RGBA;
-            write(fd, &type, 1);
-            write(fd, pixels, 4);
-        }
-
-        prev_px = *pixels++;
+        
+        prev_px = *pixels;
         lookup_array[hash] = prev_px;
     }
 
