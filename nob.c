@@ -1,19 +1,18 @@
 #define NOB_IMPLEMENTATION
-#define NOB_STRIP_PREFIX
 #include "thirdparty/nob.h"
 
 #define BUILD_FOLDER "build/"
 #define SOURCE_FOLDER "src/"
 
-bool build_target_sync(Cmd *cmd, const char *target, const char *output) {
-    cmd_append(cmd, "cc");
-    cmd_append(cmd, target);
-    cmd_append(cmd, "-o", output);
-    cmd_append(cmd, "-Wall", "-Wextra");
-    cmd_append(cmd, "-O3");
-    cmd_append(cmd, "-lm");
+bool build_target_sync(Nob_Cmd *cmd, const char *target, const char *output) {
+    nob_cmd_append(cmd, "cc");
+    nob_cmd_append(cmd, target);
+    nob_cmd_append(cmd, "-o", output);
+    nob_cmd_append(cmd, "-Wall", "-Wextra");
+    nob_cmd_append(cmd, "-O3");
+    nob_cmd_append(cmd, "-lm");
 
-    if (!cmd_run_sync_and_reset(cmd)) return false;
+    if (!nob_cmd_run_sync_and_reset(cmd)) return false;
 
     return true;
 }
@@ -21,7 +20,7 @@ bool build_target_sync(Cmd *cmd, const char *target, const char *output) {
 int main(int argc, char **argv) {
     NOB_GO_REBUILD_URSELF(argc, argv);
 
-    Cmd cmd = {0};
+    Nob_Cmd cmd = {0};
 
     if (!nob_mkdir_if_not_exists(BUILD_FOLDER)) return 1;
 
