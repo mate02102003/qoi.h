@@ -114,7 +114,12 @@ bool qoi_load_image_data(FILE *fd, qoi_image* image) {
         fprintf(stderr, "[ERROR]: Couldn't jump to end of file!\n");
         return false;
     }
-    const size_t data_size = ftell(fd) - QOI_HEADER_SIZE - QOI_END_SIZE;
+#ifndef _WIN32
+    long data_size = ftell(fd);
+#else
+    long long data_size = _ftelli64(fd);
+#endif
+    data_size -= QOI_HEADER_SIZE + QOI_END_SIZE;
     uint8_t *data = (uint8_t*)malloc(data_size);
     
     if (data == NULL) {
