@@ -21,3 +21,4 @@ $ ./build/qoi_to_png <input QOI image path> <output PNG image path>
 - [QOI offical site](https://qoiformat.org/)
 - [QOI specification](https://qoiformat.org/qoi-specification.pdf)
 - [QOI tests](https://qoiformat.org/qoi_test_images.zip)
+- [QOI Github offical site](https://github.com/phoboslab/qoi)
