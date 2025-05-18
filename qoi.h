@@ -67,7 +67,6 @@ typedef struct {
 } qoi_image;
 
 uint8_t qoi_hash(qoi_rgba *color);
-void *qoi_change_byte_order(void *b, const size_t size);
 bool qoi_load_image_header(FILE *fd, qoi_image *image);
 bool qoi_load_image_data(FILE *fd, qoi_image *image);
 bool qoi_load_image(const char *filepath, qoi_image *image);
@@ -96,17 +95,6 @@ bool fwriteu32be(FILE *fd, uint32_t *p) {
         return false;
     }
     return true;
-}
-
-void *qoi_change_byte_order(void *b, const size_t size) {
-    assert(size % 2 == 0);
-    uint8_t *t = (uint8_t *)b;
-    for (size_t i = 0; i < size / 2; ++i) {
-        uint8_t temp = t[i];
-        t[i] = t[size - i - 1];
-        t[size - i - 1] = temp;
-    }
-    return b;
 }
 
 bool qoi_load_image_header(FILE *fd, qoi_image* image) {
