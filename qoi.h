@@ -81,6 +81,23 @@ inline uint8_t qoi_hash(qoi_rgba *color) {
     return (color->r * 3 + color->g * 5 + color->b * 7 + color->a * 11) % 64;
 }
 
+bool freadu32be(FILE *fd, uint32_t *p) {
+    uint8_t buf[4];
+    if (fread(buf, 1, 4, fd) != 4) {
+        return false;
+    }
+
+    *p = (uint32_t)buf[3] << 24 | (uint32_t)buf[2] << 16 | (uint32_t)buf[1] << 8 | (uint32_t)buf[0];
+    return true;
+}
+
+bool fwriteu32be(FILE *fd, uint32_t *p) {
+    if (fwrite((uint8_t*)p, 1, 4, fd) != 4) {
+        return false;
+    }
+    return true;
+}
+
 void *qoi_change_byte_order(void *b, const size_t size) {
     assert(size % 2 == 0);
     uint8_t *t = (uint8_t *)b;
@@ -93,18 +110,36 @@ void *qoi_change_byte_order(void *b, const size_t size) {
 }
 
 bool qoi_load_image_header(FILE *fd, qoi_image* image) {
-    if (fread(&image->header, QOI_HEADER_SIZE, 1, fd) != 1) {
-        fprintf(stderr, "[ERROR]: Incorrect header read size!\n");
+    if (fread(&image->header.magic, 1, strlen(QOI_MAGIC), fd) != 4) {
+        fprintf(stderr, "[ERROR]: Couldn't read file magic!\n");
         return false;
     }
-    
     if (memcmp(image->header.magic, QOI_MAGIC, 4) != 0) {
         fprintf(stderr, "[ERROR]: Incorrect magic!\n");
         return false;
     }
 
-    qoi_change_byte_order(&image->header.width, sizeof(image->header.width));
-    qoi_change_byte_order(&image->header.height, sizeof(image->header.height));
+    if (!freadu32be(fd, &image->header.width)) {
+        fprintf(stderr, "[ERROR]: Couldn't read image width!\n");
+        return false;
+    }
+    if (!freadu32be(fd, &image->header.height)) {
+        fprintf(stderr, "[ERROR]: Couldn't read image height!\n");
+        return false;
+    }
+    if (fread(&image->header.chanels, 1, 1, fd) != 1) {
+        fprintf(stderr, "[ERROR]: Couldn't read image chanels!\n");
+        return false;
+    }
+    if (fread(&image->header.colorspace, 1, 1, fd) != 1) {
+        fprintf(stderr, "[ERROR]: Couldn't read image colorspace!\n");
+        return false;
+    }
+
+    if (fread(&image->header, QOI_HEADER_SIZE, 1, fd) != 1) {
+        fprintf(stderr, "[ERROR]: Incorrect header read size!\n");
+        return false;
+    }
 
     return true;
 }
@@ -130,7 +165,7 @@ bool qoi_load_image_data(FILE *fd, qoi_image* image) {
     
     fseek(fd, QOI_HEADER_SIZE, SEEK_SET);
     size_t data_read_count = fread(data, 1, data_size, fd);
-    if (data_read_count < data_size) {
+    if (data_read_count < (size_t)data_size) {
         fprintf(stderr, "[ERROR]: Read data size (%zu) doesn't match seeked size (%zu)!\n", data_read_count, data_size);
         return false;
     }
@@ -236,8 +271,8 @@ bool qoi_write_image(const char* filepath, uint32_t width, uint32_t height, uint
     }
 
     fwrite(QOI_MAGIC, strlen(QOI_MAGIC), 1, fd);
-    fwrite(qoi_change_byte_order(&width, sizeof(width)), sizeof(width), 1, fd);
-    fwrite(qoi_change_byte_order(&height, sizeof(height)), sizeof(height), 1, fd);
+    fwriteu32be(fd, &width);
+    fwriteu32be(fd, &height);
     fwrite(&chanels, sizeof(chanels), 1, fd);
     fwrite(&colorspace, sizeof(colorspace), 1, fd);
     
