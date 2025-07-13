@@ -26,7 +26,7 @@ bool build_target_sync_and_reset(Nob_Cmd *cmd, const char *target, const char *o
     return true;
 }
 
-static char *python_version(char *version) {
+static char *python__version(char *version) {
 #ifndef _WIN32
     return version;
 #else
@@ -57,7 +57,7 @@ bool build_python_library_sync_and_reset(Nob_Cmd *cmd, char *version, const char
     nob_cmd_append(cmd, nob_temp_sprintf("-L%s", python_library_path));
 #endif
     nob_cmd_append(cmd, "-lpython3");
-    nob_cmd_append(cmd, nob_temp_sprintf("-lpython%s", python_version(version)));
+    nob_cmd_append(cmd, nob_temp_sprintf("-lpython%s", python__version(version)));
 
     if (!nob_cmd_run_sync_and_reset(cmd)) return false;
 
@@ -100,7 +100,7 @@ int main(int argc, char **argv) {
     char *local = getenv("LOCALAPPDATA");
     if (local == NULL) return 1;
 
-    char *python_path = nob_temp_sprintf("%s\\Programs\\Python\\Python313", local);
+    char *python_path = nob_temp_sprintf("%s\\Programs\\Python\\Python%s", local, python__version(*python_version));
     if (!build_python_library_sync_and_reset(&cmd, *python_version, nob_temp_sprintf("%s\\include", python_path), nob_temp_sprintf("%s\\libs", python_path), *optimize)) return 1;
 #endif
     
