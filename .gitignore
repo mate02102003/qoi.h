@@ -1,7 +1,8 @@
 .vscode
 build/
+__pycache__/
 
-main.c
+main.*
 test.c
 
 nob
