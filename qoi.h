@@ -264,9 +264,6 @@ bool qoi_write_image(const char* filepath, uint32_t width, uint32_t height, uint
     fwrite(&chanels, sizeof(chanels), 1, fd);
     fwrite(&colorspace, sizeof(colorspace), 1, fd);
     
-    qoi_change_byte_order(&width, sizeof(width));
-    qoi_change_byte_order(&height, sizeof(height));
-    
     qoi_rgba lookup_array[64] = {0};
     qoi_rgba prev_px = { 0, 0, 0, 255 };
     qoi_rgba *pixels_end = &pixels[width * height];
