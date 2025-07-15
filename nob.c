@@ -26,7 +26,7 @@ bool build_target_sync_and_reset(Nob_Cmd *cmd, const char *target, const char *o
     return true;
 }
 
-static char *python__version(char *version) {
+char *python__version(char *version) {
 #ifndef _WIN32
     return version;
 #else
@@ -67,7 +67,7 @@ bool build_python_library_sync_and_reset(Nob_Cmd *cmd, char *version, const char
 int main(int argc, char **argv) {
     bool *help            = flag_bool("help",  false, "Print this help to stdout and exit with 0");
     bool *optimize        = flag_bool("O",     false, "Enable optimisation");
-    char **python_version = flag_str ("PYVer", NULL,  "[MANDATORY] Specifiy Python version (Usage: -PYVer=3.13)");
+    char **python_version = flag_str ("PYVer", NULL,  "[MANDATORY] Specifiy Python version (Usage: -PYVer 3.13)");
 
     int    flag_argc = argc;
     char **flag_argv = argv; 
@@ -95,7 +95,7 @@ int main(int argc, char **argv) {
     if (!build_target_sync_and_reset(&cmd, SOURCE_FOLDER"qoi_to_png.c", BUILD_FOLDER"qoi_to_png", *optimize)) return 1;
     if (!build_target_sync_and_reset(&cmd, SOURCE_FOLDER"png_to_qoi.c", BUILD_FOLDER"png_to_qoi", *optimize)) return 1;
 #ifndef _WIN32
-    if (!build_python_library_sync_and_reset(&cmd, *python_version, "/usr/include/python3.13", NULL, *optimize)) return 1;
+    if (!build_python_library_sync_and_reset(&cmd, *python_version, nob_temp_sprintf("/usr/include/python%s", python__version(*python_version)), NULL, *optimize)) return 1;
 #else
     char *local = getenv("LOCALAPPDATA");
     if (local == NULL) return 1;
