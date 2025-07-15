@@ -5,11 +5,8 @@ __pycache__/
 main.*
 test.c
 
-nob
-nob.old
-nob.exe
-main
-main.exe
+nob*
+main*
 loaded_qoi.png
 test*
 
