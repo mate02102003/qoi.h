@@ -6,6 +6,7 @@ main.*
 test.c
 
 nob*
+!nob.c
 main*
 loaded_qoi.png
 test*
