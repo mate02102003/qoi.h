@@ -57,7 +57,7 @@ bool build_python_library_sync_and_reset(Nob_Cmd *cmd, char *version, const char
     nob_cmd_append(cmd, nob_temp_sprintf("-L%s", python_library_path));
 #endif
     nob_cmd_append(cmd, "-lpython3");
-    nob_cmd_append(cmd, nob_temp_sprintf("-lpython%s", python__version(version)));
+    nob_cmd_append(cmd, nob_temp_sprintf("-lpython%s", version));
 
     if (!nob_cmd_run_sync_and_reset(cmd)) return false;
 
@@ -88,6 +88,8 @@ int main(int argc, char **argv) {
         return 1;
     }
 
+    *python_version = python__version(*python_version);
+
     Nob_Cmd cmd = {0};
 
     if (!nob_mkdir_if_not_exists(BUILD_FOLDER)) return 1;
@@ -95,12 +97,12 @@ int main(int argc, char **argv) {
     if (!build_target_sync_and_reset(&cmd, SOURCE_FOLDER"qoi_to_png.c", BUILD_FOLDER"qoi_to_png", *optimize)) return 1;
     if (!build_target_sync_and_reset(&cmd, SOURCE_FOLDER"png_to_qoi.c", BUILD_FOLDER"png_to_qoi", *optimize)) return 1;
 #ifndef _WIN32
-    if (!build_python_library_sync_and_reset(&cmd, *python_version, nob_temp_sprintf("/usr/include/python%s", python__version(*python_version)), NULL, *optimize)) return 1;
+    if (!build_python_library_sync_and_reset(&cmd, *python_version, nob_temp_sprintf("/usr/include/python%s", *python_version), NULL, *optimize)) return 1;
 #else
     char *local = getenv("LOCALAPPDATA");
     if (local == NULL) return 1;
 
-    char *python_path = nob_temp_sprintf("%s\\Programs\\Python\\Python%s", local, python__version(*python_version));
+    char *python_path = nob_temp_sprintf("%s\\Programs\\Python\\Python%s", local, *python_version);
     if (!build_python_library_sync_and_reset(&cmd, *python_version, nob_temp_sprintf("%s\\include", python_path), nob_temp_sprintf("%s\\libs", python_path), *optimize)) return 1;
 #endif
     
