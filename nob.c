@@ -105,6 +105,7 @@ int main(int argc, char **argv) {
     char *python_path = nob_temp_sprintf("%s\\Programs\\Python\\Python%s", local, *python_version);
     if (!build_python_library_sync_and_reset(&cmd, *python_version, nob_temp_sprintf("%s\\include", python_path), nob_temp_sprintf("%s\\libs", python_path), *optimize)) return 1;
 #endif
+    if (!nob_copy_file(SOURCE_FOLDER"qoipy.pyi", BUILD_FOLDER"qoipy.pyi")) return 1;
     
     return 0;
 }
