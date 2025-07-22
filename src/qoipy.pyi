@@ -1,3 +1,10 @@
+"""
+
+Python bindings for header-only QOI format implementation
+
+"""
+
+
 import typing
 
 class pixel:
