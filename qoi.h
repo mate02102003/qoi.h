@@ -17,11 +17,24 @@
 #define QOI_DA_INIT_CAP 65536U
 #endif
 
+#ifndef QOI_Malloc
+#define QOI_Malloc malloc
+#endif
+#ifndef QOI_Calloc
+#define QOI_Calloc calloc
+#endif
+#ifndef QOI_Realloc
+#define QOI_Realloc realloc
+#endif
+#ifndef QOI_Free
+#define QOI_Free free
+#endif
+
 #define qoi_da_append(da, item)                                                          \
     do {                                                                                 \
         if ((da)->count >= (da)->capacity) {                                             \
             (da)->capacity = (da)->capacity == 0 ? QOI_DA_INIT_CAP : (da)->capacity*2;   \
-            (da)->items = realloc((da)->items, (da)->capacity*sizeof(*(da)->items));     \
+            (da)->items = QOI_Realloc((da)->items, (da)->capacity*sizeof(*(da)->items)); \
         }                                                                                \
         (da)->items[(da)->count++] = (item);                                             \
     } while (0)
@@ -143,7 +156,7 @@ bool qoi_load_image_data(FILE *fd, qoi_image* image) {
     long long data_size = _ftelli64(fd);
 #endif
     data_size -= QOI_HEADER_SIZE + QOI_END_SIZE;
-    uint8_t *data = (uint8_t*)malloc(data_size);
+    uint8_t *data = (uint8_t*)QOI_Malloc(data_size);
     
     if (data == NULL) {
         fprintf(stderr, "[ERROR]: Couldn't allocate space for data (size: %zu)!\n", data_size);
@@ -247,7 +260,7 @@ error:
 }
 
 void qoi_free_image(qoi_image* image) {
-    free(image->image_data.items);
+    QOI_Free(image->image_data.items);
 }
 
 bool qoi_write_image(const char* filepath, uint32_t width, uint32_t height, uint8_t chanels, uint8_t colorspace, qoi_rgba* pixels) {
