@@ -64,11 +64,12 @@ static PyTypeObject PixelType = {
 
 typedef struct {
     PyObject_HEAD
-    uint32_t     width;
-    uint32_t     height;
-    uint8_t      chanels;
-    uint8_t      colorspace;
-    PixelObject *pixels;
+    char          magic[4];
+    uint32_t      width;
+    uint32_t      height;
+    uint8_t       chanels;
+    uint8_t       colorspace;
+    PixelObject **pixels;
 } QOIImageObject;
 
 static PyTypeObject QOIImageType = {
