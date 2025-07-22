@@ -40,30 +40,8 @@ Pixel_repr(PixelObject *self) {
     if (Py_ReprEnter((PyObject*) self) != 0)
         return NULL;
 
-    _PyUnicodeWriter writer = {0};
-    _PyUnicodeWriter_Init(&writer);
-
-    if (_PyUnicodeWriter_WriteStr(&writer, PyUnicode_FromString("pixel")) < 0)
-        goto error;
-    if (_PyUnicodeWriter_WriteChar(&writer, '(') < 0)
-        goto error;
-    if (_PyUnicodeWriter_WriteStr(&writer, PyUnicode_FromFormat("r=%d, ", self->r)) < 0)
-        goto error;
-    if (_PyUnicodeWriter_WriteStr(&writer, PyUnicode_FromFormat("g=%d, ", self->g)) < 0)
-        goto error;
-    if (_PyUnicodeWriter_WriteStr(&writer, PyUnicode_FromFormat("b=%d, ", self->b)) < 0)
-        goto error;
-    if (_PyUnicodeWriter_WriteStr(&writer, PyUnicode_FromFormat("a=%d", self->a)) < 0)
-        goto error;
-    if (_PyUnicodeWriter_WriteChar(&writer, ')') < 0)
-        goto error;
-
     Py_ReprLeave((PyObject *) self);
-    return _PyUnicodeWriter_Finish(&writer);
-error:
-    _PyUnicodeWriter_Dealloc(&writer);
-    Py_ReprLeave((PyObject *) self);
-    return NULL;
+    return PyUnicode_FromFormat("pixel(r=%d, g=%d, b=%d, a=%d)", self->r, self->g, self->b, self->a);
 }
 
 static PyMemberDef Pixel_members[] = {
