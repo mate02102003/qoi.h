@@ -16,8 +16,7 @@ typedef struct {
     uint8_t r, g, b, a;
 } PixelObject;
 
-static int
-Pixel_init(PixelObject *self, PyObject *args, PyObject *kwargs) {
+static int Pixel_init(PixelObject *self, PyObject *args, PyObject *kwargs) {
     static char *kwlist[] = { "r", "g", "b", "a", NULL };
 
     if (!PyArg_ParseTupleAndKeywords(args, kwargs, "|BBBB", kwlist,
@@ -30,13 +29,11 @@ Pixel_init(PixelObject *self, PyObject *args, PyObject *kwargs) {
     return 0;
 }
 
-static Py_hash_t
-Pixel_hash(PixelObject *self) {
+static Py_hash_t Pixel_hash(PixelObject *self) {
     return (self->r * 3 + self->g * 5 + self->b * 7 + self->a * 11) % 64;
 }
 
-static PyObject *
-Pixel_repr(PixelObject *self) {
+static PyObject *Pixel_repr(PixelObject *self) {
     if (Py_ReprEnter((PyObject*) self) != 0)
         return NULL;
 
@@ -89,8 +86,7 @@ static struct PyModuleDef qoipy_module = {
     .m_doc = "Python bindings for header-only QOI format implementation",
 };
 
-PyMODINIT_FUNC
-PyInit_qoipy(void)
+PyMODINIT_FUNC PyInit_qoipy(void)
 {
     if (PyType_Ready(&PixelType) < 0)
         return NULL;
