@@ -3,6 +3,11 @@
 
 #include <stddef.h>
 
+#define QOI_Malloc  PyMem_Malloc
+#define QOI_Calloc  PyMem_Calloc
+#define QOI_Realloc PyMem_Realloc
+#define QOI_Free    PyMem_Free
+
 #define QOI_IMPLEMENTATION
 #include "../qoi.h"
 
