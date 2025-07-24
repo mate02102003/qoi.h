@@ -19,7 +19,7 @@ typedef struct {
 static int Pixel_init(PixelObject *self, PyObject *args, PyObject *kwargs) {
     static char *kwlist[] = { "r", "g", "b", "a", NULL };
 
-    if (!PyArg_ParseTupleAndKeywords(args, kwargs, "|BBBB", kwlist,
+    if (!PyArg_ParseTupleAndKeywords(args, kwargs, "|bbbb", kwlist,
                                      &self->r,
                                      &self->g,
                                      &self->b,
