@@ -16,3 +16,13 @@ class pixel:
     def __init__(self: typing.Self, r: int = 0, g: int = 0, b: int = 0, a: int = 0) -> None: ...
     def __hash__(self: typing.Self) -> int: ...
     def __repr__(self: typing.Self) -> str: ...
+
+class QOIImage:
+    magic:      str
+    width:      int
+    height:     int
+    chanels:    int
+    colorspace: int
+
+    @staticmethod
+    def load(filapath: str) -> "QOIImage": ...
