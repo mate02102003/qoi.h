@@ -6,6 +6,11 @@
 #define BUILD_FOLDER "build/"
 #define SOURCE_FOLDER "src/"
 
+typedef struct {
+    bool optimize;
+    bool debug;
+} Options;
+
 void usage(FILE *stream)
 {
     fprintf(stream, "Usage: ./nob [OPTIONS]\n");
@@ -13,14 +18,15 @@ void usage(FILE *stream)
     flag_print_options(stream);
 }
 
-bool build_target_sync_and_reset(Nob_Cmd *cmd, const char *target, const char *output, bool optimize) {
+bool build_target_sync_and_reset(Nob_Cmd *cmd, const char *target, const char *output, Options options) {
     nob_cmd_append(cmd, "cc");
     nob_cmd_append(cmd, target);
     nob_cmd_append(cmd, "-o", output);
     nob_cmd_append(cmd, "-Wall", "-Wextra");
-    if (optimize) nob_cmd_append(cmd, "-O3");
+    if (options.optimize) nob_cmd_append(cmd, "-O3");
+    if (options.debug) nob_cmd_append(cmd, "-ggdb");
     nob_cmd_append(cmd, "-lm");
-
+    
     if (!nob_cmd_run_sync_and_reset(cmd)) return false;
     
     return true;
@@ -40,7 +46,7 @@ char *python__version(char *version) {
 #endif
 }
 
-bool build_python_library_sync_and_reset(Nob_Cmd *cmd, char *version, const char *python_include_path, const char* python_library_path, bool optimize) {
+bool build_python_library_sync_and_reset(Nob_Cmd *cmd, char *version, const char *python_include_path, const char* python_library_path, Options options) {
     nob_cmd_append(cmd, "cc");
     nob_cmd_append(cmd, "-fPIC");
     nob_cmd_append(cmd, "-shared");
@@ -51,7 +57,8 @@ bool build_python_library_sync_and_reset(Nob_Cmd *cmd, char *version, const char
     nob_cmd_append(cmd, "-o", BUILD_FOLDER"qoipy.pyd");
 #endif
     nob_cmd_append(cmd, "-Wall", "-Wextra");
-    if (optimize) nob_cmd_append(cmd, "-O3");
+    if (options.optimize) nob_cmd_append(cmd, "-O3");
+    if (options.debug) nob_cmd_append(cmd, "-ggdb");
     nob_cmd_append(cmd, nob_temp_sprintf("-I%s", python_include_path));
 #ifdef _WIN32
     nob_cmd_append(cmd, nob_temp_sprintf("-L%s", python_library_path));
@@ -67,6 +74,7 @@ bool build_python_library_sync_and_reset(Nob_Cmd *cmd, char *version, const char
 int main(int argc, char **argv) {
     bool *help            = flag_bool("help",  false, "Print this help to stdout and exit with 0");
     bool *optimize        = flag_bool("O",     false, "Enable optimisation");
+    bool *debug           = flag_bool("debug",     false, "Enable degub info");
     char **python_version = flag_str ("PYVer", NULL,  "[MANDATORY] Specifiy Python version (Usage: -PYVer 3.13)");
 
     int    flag_argc = argc;
@@ -88,22 +96,26 @@ int main(int argc, char **argv) {
         return 1;
     }
 
+    Options options = {
+        .optimize = *optimize,
+        .debug    = *debug,
+    };
     *python_version = python__version(*python_version);
 
     Nob_Cmd cmd = {0};
 
     if (!nob_mkdir_if_not_exists(BUILD_FOLDER)) return 1;
 
-    if (!build_target_sync_and_reset(&cmd, SOURCE_FOLDER"qoi_to_png.c", BUILD_FOLDER"qoi_to_png", *optimize)) return 1;
-    if (!build_target_sync_and_reset(&cmd, SOURCE_FOLDER"png_to_qoi.c", BUILD_FOLDER"png_to_qoi", *optimize)) return 1;
+    if (!build_target_sync_and_reset(&cmd, SOURCE_FOLDER"qoi_to_png.c", BUILD_FOLDER"qoi_to_png", options)) return 1;
+    if (!build_target_sync_and_reset(&cmd, SOURCE_FOLDER"png_to_qoi.c", BUILD_FOLDER"png_to_qoi", options)) return 1;
 #ifndef _WIN32
-    if (!build_python_library_sync_and_reset(&cmd, *python_version, nob_temp_sprintf("/usr/include/python%s", *python_version), NULL, *optimize)) return 1;
+    if (!build_python_library_sync_and_reset(&cmd, *python_version, nob_temp_sprintf("/usr/include/python%s", *python_version), NULL, options)) return 1;
 #else
     char *local = getenv("LOCALAPPDATA");
     if (local == NULL) return 1;
 
     char *python_path = nob_temp_sprintf("%s\\Programs\\Python\\Python%s", local, *python_version);
-    if (!build_python_library_sync_and_reset(&cmd, *python_version, nob_temp_sprintf("%s\\include", python_path), nob_temp_sprintf("%s\\libs", python_path), *optimize)) return 1;
+    if (!build_python_library_sync_and_reset(&cmd, *python_version, nob_temp_sprintf("%s\\include", python_path), nob_temp_sprintf("%s\\libs", python_path), options)) return 1;
 #endif
     if (!nob_copy_file(SOURCE_FOLDER"qoipy.pyi", BUILD_FOLDER"qoipy.pyi")) return 1;
     
