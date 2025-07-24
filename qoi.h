@@ -99,14 +99,16 @@ bool freadu32be(FILE *fd, uint32_t *p) {
         return false;
     }
 
-    *p = (uint32_t)buf[3] << 24 | (uint32_t)buf[2] << 16 | (uint32_t)buf[1] << 8 | (uint32_t)buf[0];
+    *p = (uint32_t)buf[0] << 24 | (uint32_t)buf[1] << 16 | (uint32_t)buf[2] << 8 | (uint32_t)buf[3];
     return true;
 }
 
 bool fwriteu32be(FILE *fd, uint32_t *p) {
-    if (fwrite((uint8_t*)p, 1, 4, fd) != 4) {
-        return false;
-    }
+    uint8_t *temp = (uint8_t *)p;
+    if (!fwrite(&temp[3], 1, 1, fd)) return false;
+    if (!fwrite(&temp[2], 1, 1, fd)) return false;
+    if (!fwrite(&temp[1], 1, 1, fd)) return false;
+    if (!fwrite(&temp[0], 1, 1, fd)) return false;
     return true;
 }
 
@@ -137,11 +139,6 @@ bool qoi_load_image_header(FILE *fd, qoi_image* image) {
         return false;
     }
 
-    if (fread(&image->header, QOI_HEADER_SIZE, 1, fd) != 1) {
-        fprintf(stderr, "[ERROR]: Incorrect header read size!\n");
-        return false;
-    }
-
     return true;
 }
 
@@ -166,7 +163,11 @@ bool qoi_load_image_data(FILE *fd, qoi_image* image) {
     
     fseek(fd, QOI_HEADER_SIZE, SEEK_SET);
     size_t data_read_count = fread(data, 1, data_size, fd);
-    if (data_read_count < (size_t)data_size) {
+#ifndef _WIN32
+    if ((long) data_read_count < data_size) {
+#else
+    if ((long long) data_read_count < data_size) {
+#endif
         fprintf(stderr, "[ERROR]: Read data size (%zu) doesn't match seeked size (%zu)!\n", data_read_count, data_size);
         return false;
     }
@@ -235,7 +236,7 @@ bool qoi_load_image(const char* filepath, qoi_image* image) {
     FILE *fd = fopen(filepath, "rb");
 
     if (NULL == fd) {
-        fprintf(stderr, "[ERROR]: Couldn't open file!\n");
+        fprintf(stderr, "[ERROR]: Couldn't open file %s!\n", filepath);
         return false;
     }
     if (!qoi_load_image_header(fd, image)) {
