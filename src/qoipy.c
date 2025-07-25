@@ -81,7 +81,8 @@ static void QOIImage_dealloc(QOIImageObject *self) {
     Py_TYPE(self)->tp_free((PyObject *) self);
 }
 
-static PyObject *load_QOIImage(PyObject *Py_UNUSED(self), PyObject *args);
+static PyObject *load_QOIImage (PyObject *Py_UNUSED(self), PyObject *arg);
+static PyObject *write_QOIImage(QOIImageObject *self, PyObject *arg);
 
 static PyMemberDef QOIImage_members[] = {
     {"width",      Py_T_UINT , offsetof(QOIImageObject, width),      0, "Width of the image"},
@@ -92,7 +93,8 @@ static PyMemberDef QOIImage_members[] = {
 };
 
 static PyMethodDef QOIImage_methods[] = {
-    {"load", load_QOIImage, METH_O | METH_STATIC, "Load QOI from file!"},
+    {"load" ,               load_QOIImage, METH_O | METH_STATIC, "Load QOI from file!"},
+    {"write", (PyCFunction)write_QOIImage, METH_O              , "Write QOI to file!" },
     {NULL}  /* Sentinel */
 };
 
@@ -145,10 +147,52 @@ static PyObject *load_QOIImage(PyObject *Py_UNUSED(self), PyObject *arg) {
 
     if (!copy_cimage_to_pyimage(py_image, &c_image))
         goto error;
-    
+
     return (PyObject *)py_image;
 error:
     Py_DECREF(py_image);
+    qoi_free_image(&c_image);
+    return NULL;
+}
+
+bool copy_pyimage_to_cimage(qoi_image *c_image, QOIImageObject *py_image) {
+    if (memcpy(c_image->header.magic, py_image->magic, sizeof(py_image->magic)) == NULL)
+        return false;
+    
+    c_image->header.width      = py_image->width;
+    c_image->header.height     = py_image->height;
+    c_image->header.chanels    = py_image->chanels;
+    c_image->header.colorspace = py_image->colorspace;
+
+    uint64_t pixel_count = c_image->header.width * c_image->header.height;
+
+    for(uint64_t i = 0; i < pixel_count; ++i) {
+        qoi_rgba c_pixel = {
+            .r = py_image->pixels[i]->r,
+            .g = py_image->pixels[i]->g,
+            .b = py_image->pixels[i]->b,
+            .a = py_image->pixels[i]->a,
+        };
+        qoi_da_append(&c_image->image_data, c_pixel);
+    }
+    return true;
+}
+
+static PyObject *write_QOIImage(QOIImageObject *self, PyObject *arg) {
+    const char *filepath;
+    qoi_image c_image = {0};
+
+    if (!PyArg_Parse(arg, "s", &filepath))
+        goto error;
+
+    if (!copy_pyimage_to_cimage(&c_image, self))
+        goto error;
+        
+    if (!qoi_write_image_from_qoi_image(filepath, c_image))
+        goto error;
+
+    Py_RETURN_NONE;
+error:
     qoi_free_image(&c_image);
     return NULL;
 }
