@@ -30,13 +30,23 @@
 #define QOI_Free free
 #endif
 
-#define qoi_da_append(da, item)                                                          \
-    do {                                                                                 \
-        if ((da)->count >= (da)->capacity) {                                             \
-            (da)->capacity = (da)->capacity == 0 ? QOI_DA_INIT_CAP : (da)->capacity*2;   \
-            (da)->items = QOI_Realloc((da)->items, (da)->capacity*sizeof(*(da)->items)); \
-        }                                                                                \
-        (da)->items[(da)->count++] = (item);                                             \
+#define qoi_da_reserve(da, count)                                                      \
+    do {                                                                               \
+        if ((count) <= (da)->capacity) break;                                          \
+        (da)->capacity = (count);                                                      \
+        (da)->items = QOI_Realloc((da)->items, (da)->capacity * sizeof(*(da)->items)); \
+        if ((da)->items == NULL) {                                                     \
+            fprintf(stderr, "Get MORE RAM!\n");                                        \
+            abort();                                                                   \
+        }                                                                              \
+    } while(0);                                                                        \
+
+#define qoi_da_append(da, item)                                                             \
+    do {                                                                                    \
+        if ((da)->count >= (da)->capacity) {                                                \
+            qoi_da_reserve((da), (da)->capacity == 0 ? QOI_DA_INIT_CAP : (da)->capacity*2); \
+        }                                                                                   \
+        (da)->items[(da)->count++] = (item);                                                \
     } while (0)
 
 #define qoi_write_image_from_header(filepath, header, pixels) qoi_write_image(filepath, header.width, header.height, header.chanels, header.colorspace, pixels)
@@ -182,6 +192,8 @@ bool qoi_load_image_data(FILE *fd, qoi_image* image) {
         fprintf(stderr, "[ERROR]: Incorrect end magic!\n");
         return false;
     }
+
+    qoi_da_reserve(&image->image_data, image->header.width * image->header.height + 1);
 
     qoi_rgba lookup_array[64] = {0};
     qoi_rgba prev_px = { 0, 0, 0, 255 };
