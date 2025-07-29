@@ -18,7 +18,6 @@ class pixel:
     def __repr__(self: typing.Self) -> str: ...
 
 class QOIImage:
-    magic:      str
     width:      int
     height:     int
     chanels:    int
@@ -32,6 +31,8 @@ class QOIImage:
             chanels: typing.Literal[3, 4],
             pixels: typing.Sequence[pixel]
         ) -> None: ...
+    
+    def __repr__(self: typing.Self) -> str: ...
 
     @staticmethod
     def load(filepath: str) -> "QOIImage": ...
