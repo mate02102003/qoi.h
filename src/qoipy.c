@@ -74,14 +74,18 @@ typedef struct {
 
 static void QOIImage_dealloc(QOIImageObject *self) {
     uint64_t pixel_count = self->width * self->height;
+    if (self->pixels != NULL) {
     for(uint64_t i = 0; i < pixel_count; ++i)
+            if (self->pixels[i] != NULL)
         Py_XDECREF(self->pixels[i]);
 
     PyMem_Free(self->pixels);
+    }
     Py_TYPE(self)->tp_free((PyObject *) self);
 }
 
 static PyObject *load_QOIImage (PyObject *Py_UNUSED(self), PyObject *arg);
+
 static PyObject *write_QOIImage(QOIImageObject *self, PyObject *arg);
 
 static PyMemberDef QOIImage_members[] = {
