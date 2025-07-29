@@ -75,11 +75,11 @@ typedef struct {
 static void QOIImage_dealloc(QOIImageObject *self) {
     uint64_t pixel_count = self->width * self->height;
     if (self->pixels != NULL) {
-    for(uint64_t i = 0; i < pixel_count; ++i)
+        for(uint64_t i = 0; i < pixel_count; ++i)
             if (self->pixels[i] != NULL)
-        Py_XDECREF(self->pixels[i]);
-
-    PyMem_Free(self->pixels);
+                Py_XDECREF(self->pixels[i]);
+    
+        PyMem_Free(self->pixels);
     }
     Py_TYPE(self)->tp_free((PyObject *) self);
 }
@@ -87,6 +87,69 @@ static void QOIImage_dealloc(QOIImageObject *self) {
 static PyObject *load_QOIImage (PyObject *Py_UNUSED(self), PyObject *arg);
 
 static PyObject *write_QOIImage(QOIImageObject *self, PyObject *arg);
+
+static int QOIImage_init(QOIImageObject *self, PyObject *args, PyObject *kwargs) {
+    static char *kwlist[] = { "width", "height", "chanels", "colorspace", "pixels", NULL };
+
+    PyObject *pixels;
+
+    if (!PyArg_ParseTupleAndKeywords(args, kwargs, "IIbbO", kwlist, 
+                                    &self->width,
+                                    &self->height,
+                                    &self->chanels,
+                                    &self->colorspace,
+                                    &pixels)
+                                    )
+        goto error;
+
+    if (self->colorspace != 0 || self->colorspace != 1) {
+        PyErr_Format(PyExc_ValueError, "colorspace is expected to be 0 or 1, but got (%u)!", self->colorspace);
+        goto error;
+    }
+
+    if (self->chanels != 3 || self->chanels != 4) {
+        PyErr_Format(PyExc_ValueError, "chanels is expected to be 3 or 4, but got (%u)!", self->chanels);
+        goto error;
+    }
+
+    if (!PySequence_Check(pixels)) {
+        PyErr_Format(PyExc_TypeError, "pixels must be a Sequence!");
+        goto error;
+    }
+
+    Py_ssize_t seq_len = PySequence_Length(pixels);
+    if (seq_len < 0) {
+        PyErr_Format(PyExc_Exception, "couldn't get pixels length!");
+        goto error;
+    }
+
+    uint64_t expected_len = self->width * self->height;
+    if ((size_t)seq_len != expected_len) {
+        PyErr_Format(PyExc_ValueError, "expected pixels length to be (%lu), but got (%d)!", expected_len, seq_len);
+        goto error;
+    }
+    
+    self->pixels = (PixelObject **)PyMem_Calloc(expected_len, sizeof(PixelObject *));
+    if (self->pixels == NULL)
+        goto error;
+
+    for (Py_ssize_t i = 0; i < seq_len; ++i) {
+        PyObject *pixel = PySequence_GetItem(pixels, i);
+
+        if (!Py_IS_TYPE(pixel, &PixelType)) {
+            PyErr_Format(PyExc_ValueError, "pixels elements must be qoipy.pixel!");
+            goto error;
+        }
+        
+        Py_INCREF(pixel);
+        self->pixels[i] = (PixelObject *)pixel;
+    }
+    
+    return 0;
+error:
+    Py_DECREF(&pixels);
+    return -1;
+}
 
 static PyMemberDef QOIImage_members[] = {
     {"width",      Py_T_UINT , offsetof(QOIImageObject, width),      0, "Width of the image"},
