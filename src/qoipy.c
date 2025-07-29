@@ -154,6 +154,14 @@ error:
     return -1;
 }
 
+static PyObject *QOIImage_repr(QOIImageObject *self) {
+    if (Py_ReprEnter((PyObject*) self) != 0)
+        return NULL;
+
+    Py_ReprLeave((PyObject *) self);
+    return PyUnicode_FromFormat("QOIImage(width=%u, height=%u, chanels=%u, colorspace=%u)", self->width, self->height, self->chanels, self->colorspace);
+}
+
 static PyMemberDef QOIImage_members[] = {
     {"width",      Py_T_UINT , offsetof(QOIImageObject, width),      0, "Width of the image"},
     {"height",     Py_T_UINT , offsetof(QOIImageObject, height),     0, "Height of the image"},
@@ -177,6 +185,7 @@ static PyTypeObject QOIImageType = {
     .tp_new       = PyType_GenericNew,
     .tp_init      = (initproc) QOIImage_init,
     .tp_dealloc   = (destructor) QOIImage_dealloc,
+    .tp_repr      = (reprfunc) QOIImage_repr,
     .tp_members   = QOIImage_members,
     .tp_methods   = QOIImage_methods,
 };
