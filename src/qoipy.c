@@ -50,16 +50,16 @@ static PyMemberDef Pixel_members[] = {
 };
 
 static PyTypeObject PixelType = {
-    .ob_base = PyVarObject_HEAD_INIT(NULL, 0)
-    .tp_name = "qoipy.pixel",
+    .ob_base      = PyVarObject_HEAD_INIT(NULL, 0)
+    .tp_name      = "qoipy.pixel",
     .tp_basicsize = sizeof(PixelObject),
-    .tp_itemsize = 0,
-    .tp_flags = Py_TPFLAGS_DEFAULT,
-    .tp_new = PyType_GenericNew,
-    .tp_init = (initproc) Pixel_init,
-    .tp_members = Pixel_members,
-    .tp_hash = (hashfunc) Pixel_hash,
-    .tp_repr = (reprfunc) Pixel_repr,
+    .tp_itemsize  = 0,
+    .tp_flags     = Py_TPFLAGS_DEFAULT,
+    .tp_new       = PyType_GenericNew,
+    .tp_init      = (initproc) Pixel_init,
+    .tp_members   = Pixel_members,
+    .tp_hash      = (hashfunc) Pixel_hash,
+    .tp_repr      = (reprfunc) Pixel_repr,
 };
 
 typedef struct {
@@ -99,15 +99,16 @@ static PyMethodDef QOIImage_methods[] = {
 };
 
 static PyTypeObject QOIImageType = {
-    .ob_base = PyVarObject_HEAD_INIT(NULL, 0)
-    .tp_name = "qoipy.QOIImage",
+    .ob_base      = PyVarObject_HEAD_INIT(NULL, 0)
+    .tp_name      = "qoipy.QOIImage",
     .tp_basicsize = sizeof(QOIImageObject),
-    .tp_itemsize = 0,
-    .tp_flags = Py_TPFLAGS_DEFAULT,
-    .tp_new = PyType_GenericNew,
-    .tp_dealloc = (destructor) QOIImage_dealloc,
-    .tp_members = QOIImage_members,
-    .tp_methods = QOIImage_methods,
+    .tp_itemsize  = 0,
+    .tp_flags     = Py_TPFLAGS_DEFAULT,
+    .tp_new       = PyType_GenericNew,
+    .tp_init      = (initproc) QOIImage_init,
+    .tp_dealloc   = (destructor) QOIImage_dealloc,
+    .tp_members   = QOIImage_members,
+    .tp_methods   = QOIImage_methods,
 };
 
 bool copy_cimage_to_pyimage(QOIImageObject *py_image, qoi_image *c_image) {
