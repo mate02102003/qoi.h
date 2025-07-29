@@ -24,6 +24,15 @@ class QOIImage:
     chanels:    int
     colorspace: int
 
+    def __init__(
+            self: typing.Self, 
+            width: int, 
+            height: int, 
+            colorspace: typing.Literal[0, 1], 
+            chanels: typing.Literal[3, 4],
+            pixels: typing.Sequence[pixel]
+        ) -> None: ...
+
     @staticmethod
     def load(filepath: str) -> "QOIImage": ...
 
