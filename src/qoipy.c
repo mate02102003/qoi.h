@@ -123,6 +123,8 @@ bool copy_cimage_to_pyimage(QOIImageObject *py_image, qoi_image *c_image) {
     uint64_t pixel_count = py_image->width * py_image->height;
 
     py_image->pixels = (PixelObject **)PyMem_Calloc(pixel_count, sizeof(PixelObject *));
+    if (py_image->pixels == NULL)
+        return false;
 
     for(uint64_t i = 0; i < pixel_count; ++i) {
         py_image->pixels[i] = PyObject_New(PixelObject, &PixelType);
