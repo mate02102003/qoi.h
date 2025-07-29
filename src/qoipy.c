@@ -102,7 +102,7 @@ static int QOIImage_init(QOIImageObject *self, PyObject *args, PyObject *kwargs)
                                     )
         goto error;
 
-    if (strcpy(self->magic, "qoif") == NULL)
+    if (memcpy(self->magic, "qoif", 4) == NULL)
         goto error;
     
     if (self->colorspace != 0 && self->colorspace != 1) {
