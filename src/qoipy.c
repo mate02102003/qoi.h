@@ -102,6 +102,9 @@ static int QOIImage_init(QOIImageObject *self, PyObject *args, PyObject *kwargs)
                                     )
         goto error;
 
+    if (strcpy(self->magic, "qoif") == NULL)
+        goto error;
+    
     if (self->colorspace != 0 && self->colorspace != 1) {
         PyErr_Format(PyExc_ValueError, "colorspace is expected to be 0 or 1, but got (%u)!", self->colorspace);
         goto error;
