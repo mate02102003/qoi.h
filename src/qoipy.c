@@ -1,20 +1,6 @@
-#define PY_SSIZE_T_CLEAN
-#include <Python.h>
+#include "qoipy.h"
 
-#include <stddef.h>
-
-#define QOI_Malloc  PyMem_Malloc
-#define QOI_Calloc  PyMem_Calloc
-#define QOI_Realloc PyMem_Realloc
-#define QOI_Free    PyMem_Free
-
-#define QOI_IMPLEMENTATION
-#include "../qoi.h"
-
-typedef struct {
-    PyObject_HEAD
-    uint8_t r, g, b, a;
-} PixelObject;
+/*    PixelObject    */
 
 static int Pixel_init(PixelObject *self, PyObject *args, PyObject *kwargs) {
     static char *kwlist[] = { "r", "g", "b", "a", NULL };
@@ -41,52 +27,7 @@ static PyObject *Pixel_repr(PixelObject *self) {
     return PyUnicode_FromFormat("pixel(r=%d, g=%d, b=%d, a=%d)", self->r, self->g, self->b, self->a);
 }
 
-static PyMemberDef Pixel_members[] = {
-    {"r", Py_T_UBYTE, offsetof(PixelObject, r), 0, ""},
-    {"g", Py_T_UBYTE, offsetof(PixelObject, g), 0, ""},
-    {"b", Py_T_UBYTE, offsetof(PixelObject, b), 0, ""},
-    {"a", Py_T_UBYTE, offsetof(PixelObject, a), 0, ""},
-    {NULL}  /* Sentinel */
-};
-
-static PyTypeObject PixelType = {
-    .ob_base      = PyVarObject_HEAD_INIT(NULL, 0)
-    .tp_name      = "qoipy.pixel",
-    .tp_basicsize = sizeof(PixelObject),
-    .tp_itemsize  = 0,
-    .tp_flags     = Py_TPFLAGS_DEFAULT,
-    .tp_new       = PyType_GenericNew,
-    .tp_init      = (initproc) Pixel_init,
-    .tp_members   = Pixel_members,
-    .tp_hash      = (hashfunc) Pixel_hash,
-    .tp_repr      = (reprfunc) Pixel_repr,
-};
-
-typedef struct {
-    PyObject_HEAD
-    char          magic[4];
-    uint32_t      width;
-    uint32_t      height;
-    uint8_t       chanels;
-    uint8_t       colorspace;
-    PixelObject **pixels;
-} QOIImageObject;
-
-static void QOIImage_dealloc(QOIImageObject *self) {
-    uint64_t pixel_count = self->width * self->height;
-    if (self->pixels != NULL) {
-        for(uint64_t i = 0; i < pixel_count; ++i)
-            if (self->pixels[i] != NULL)
-                Py_XDECREF(self->pixels[i]);
-    
-        PyMem_Free(self->pixels);
-    }
-    Py_TYPE(self)->tp_free((PyObject *) self);
-}
-
-static PyObject *load_QOIImage (PyObject *Py_UNUSED(self), PyObject *arg);
-
-static PyObject *write_QOIImage(QOIImageObject *self, PyObject *arg);
+/*    QOIImageObject    */
 
 static int QOIImage_init(QOIImageObject *self, PyObject *args, PyObject *kwargs) {
     static char *kwlist[] = { "width", "height", "chanels", "colorspace", "pixels", NULL };
@@ -154,6 +95,18 @@ error:
     return -1;
 }
 
+static void QOIImage_dealloc(QOIImageObject *self) {
+    uint64_t pixel_count = self->width * self->height;
+    if (self->pixels != NULL) {
+        for(uint64_t i = 0; i < pixel_count; ++i)
+            if (self->pixels[i] != NULL)
+                Py_XDECREF(self->pixels[i]);
+    
+        PyMem_Free(self->pixels);
+    }
+    Py_TYPE(self)->tp_free((PyObject *) self);
+}
+
 static PyObject *QOIImage_repr(QOIImageObject *self) {
     if (Py_ReprEnter((PyObject*) self) != 0)
         return NULL;
@@ -161,34 +114,6 @@ static PyObject *QOIImage_repr(QOIImageObject *self) {
     Py_ReprLeave((PyObject *) self);
     return PyUnicode_FromFormat("QOIImage(width=%u, height=%u, chanels=%u, colorspace=%u)", self->width, self->height, self->chanels, self->colorspace);
 }
-
-static PyMemberDef QOIImage_members[] = {
-    {"width",      Py_T_UINT , offsetof(QOIImageObject, width),      0, "Width of the image"},
-    {"height",     Py_T_UINT , offsetof(QOIImageObject, height),     0, "Height of the image"},
-    {"chanels",    Py_T_UBYTE, offsetof(QOIImageObject, chanels),    0, ""},
-    {"colorspace", Py_T_UBYTE, offsetof(QOIImageObject, colorspace), 0, ""},
-    {NULL}  /* Sentinel */
-};
-
-static PyMethodDef QOIImage_methods[] = {
-    {"load" ,               load_QOIImage, METH_O | METH_STATIC, "Load QOI from file!"},
-    {"write", (PyCFunction)write_QOIImage, METH_O              , "Write QOI to file!" },
-    {NULL}  /* Sentinel */
-};
-
-static PyTypeObject QOIImageType = {
-    .ob_base      = PyVarObject_HEAD_INIT(NULL, 0)
-    .tp_name      = "qoipy.QOIImage",
-    .tp_basicsize = sizeof(QOIImageObject),
-    .tp_itemsize  = 0,
-    .tp_flags     = Py_TPFLAGS_DEFAULT,
-    .tp_new       = PyType_GenericNew,
-    .tp_init      = (initproc) QOIImage_init,
-    .tp_dealloc   = (destructor) QOIImage_dealloc,
-    .tp_repr      = (reprfunc) QOIImage_repr,
-    .tp_members   = QOIImage_members,
-    .tp_methods   = QOIImage_methods,
-};
 
 bool copy_cimage_to_pyimage(QOIImageObject *py_image, qoi_image *c_image) {
     if (memcpy(py_image->magic, c_image->header.magic, sizeof(py_image->magic)) == NULL)
@@ -278,12 +203,6 @@ error:
     qoi_free_image(&c_image);
     return NULL;
 }
-
-static struct PyModuleDef qoipy_module = {
-    PyModuleDef_HEAD_INIT,
-    .m_name = "qoipy",
-    .m_doc = "Python bindings for header-only QOI format implementation",
-};
 
 PyMODINIT_FUNC PyInit_qoipy(void)
 {
