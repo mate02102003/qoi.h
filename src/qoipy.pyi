@@ -23,7 +23,9 @@ class QOIImage:
     height:     int
     """Height of the image"""
     chanels:    int
+    """3 = RGB, 4 = RGBA"""
     colorspace: int
+    """0 = sRGB with linear alpha, 1 = all channels linear"""
 
     def __init__(
             self: typing.Self, 
