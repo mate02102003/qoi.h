@@ -19,7 +19,9 @@ class pixel:
 
 class QOIImage:
     width:      int
+    """Width of the image"""
     height:     int
+    """Height of the image"""
     chanels:    int
     colorspace: int
 
@@ -35,6 +37,8 @@ class QOIImage:
     def __repr__(self: typing.Self) -> str: ...
 
     @staticmethod
-    def load(filepath: str) -> "QOIImage": ...
+    def load(filepath: str) -> "QOIImage":
+        """Load QOI from file!"""
 
-    def write(self: typing.Self, filepath: str) -> "QOIImage": ...
+    def write(self: typing.Self, filepath: str) -> "QOIImage":
+        """Write QOI to file!"""
