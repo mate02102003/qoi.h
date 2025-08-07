@@ -49,7 +49,7 @@
         (da)->items[(da)->count++] = (item);                                                \
     } while (0)
 
-#define qoi_write_image_from_header(filepath, header, pixels) qoi_write_image(filepath, header.width, header.height, header.chanels, header.colorspace, pixels)
+#define qoi_write_image_from_header(filepath, header, pixels) qoi_write_image(filepath, header.width, header.height, header.channels, header.colorspace, pixels)
 #define qoi_write_image_from_qoi_image(filepath, image) qoi_write_image_from_header(filepath, image.header, image.image_data.items)
 
 #define qoi_between(n, l, h) l <= n && n <= h // ends included
@@ -67,7 +67,7 @@ typedef struct {
     char     magic[4];
     uint32_t width;
     uint32_t height;
-    uint8_t  chanels;
+    uint8_t  channels;
     uint8_t  colorspace;
 } qoi_header;
 
@@ -94,7 +94,7 @@ bool qoi_load_image_header(FILE *fd, qoi_image *image);
 bool qoi_load_image_data(FILE *fd, qoi_image *image);
 bool qoi_load_image(const char *filepath, qoi_image *image);
 void qoi_free_image(qoi_image *image);
-bool qoi_write_image(const char *filepath, uint32_t width, uint32_t height, uint8_t chanels, uint8_t colorspace, qoi_rgba *pixels);
+bool qoi_write_image(const char *filepath, uint32_t width, uint32_t height, uint8_t channels, uint8_t colorspace, qoi_rgba *pixels);
 
 #endif // QOI_HEADER
 #ifdef QOI_IMPLEMENTATION
@@ -140,8 +140,8 @@ bool qoi_load_image_header(FILE *fd, qoi_image* image) {
         fprintf(stderr, "[ERROR]: Couldn't read image height!\n");
         return false;
     }
-    if (fread(&image->header.chanels, 1, 1, fd) != 1) {
-        fprintf(stderr, "[ERROR]: Couldn't read image chanels!\n");
+    if (fread(&image->header.channels, 1, 1, fd) != 1) {
+        fprintf(stderr, "[ERROR]: Couldn't read image channels!\n");
         return false;
     }
     if (fread(&image->header.colorspace, 1, 1, fd) != 1) {
@@ -276,7 +276,7 @@ void qoi_free_image(qoi_image* image) {
     QOI_Free(image->image_data.items);
 }
 
-bool qoi_write_image(const char* filepath, uint32_t width, uint32_t height, uint8_t chanels, uint8_t colorspace, qoi_rgba* pixels) {
+bool qoi_write_image(const char* filepath, uint32_t width, uint32_t height, uint8_t channels, uint8_t colorspace, qoi_rgba* pixels) {
     FILE *fd = fopen(filepath, "wb");
 
     if (NULL == fd) {
@@ -287,7 +287,7 @@ bool qoi_write_image(const char* filepath, uint32_t width, uint32_t height, uint
     fwrite(QOI_MAGIC, strlen(QOI_MAGIC), 1, fd);
     fwriteu32be(fd, &width);
     fwriteu32be(fd, &height);
-    fwrite(&chanels, sizeof(chanels), 1, fd);
+    fwrite(&channels, sizeof(channels), 1, fd);
     fwrite(&colorspace, sizeof(colorspace), 1, fd);
     
     qoi_rgba lookup_array[64] = {0};

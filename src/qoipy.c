@@ -30,14 +30,14 @@ static PyObject *Pixel_repr(PixelObject *self) {
 /*    QOIImageObject    */
 
 static int QOIImage_init(QOIImageObject *self, PyObject *args, PyObject *kwargs) {
-    static char *kwlist[] = { "width", "height", "chanels", "colorspace", "pixels", NULL };
+    static char *kwlist[] = { "width", "height", "channels", "colorspace", "pixels", NULL };
 
     PyObject *pixels;
 
     if (!PyArg_ParseTupleAndKeywords(args, kwargs, "IIbbO", kwlist, 
                                     &self->width,
                                     &self->height,
-                                    &self->chanels,
+                                    &self->channels,
                                     &self->colorspace,
                                     &pixels)
                                     )
@@ -51,8 +51,8 @@ static int QOIImage_init(QOIImageObject *self, PyObject *args, PyObject *kwargs)
         goto error;
     }
 
-    if (self->chanels != 3 && self->chanels != 4) {
-        PyErr_Format(PyExc_ValueError, "chanels is expected to be 3 or 4, but got (%u)!", self->chanels);
+    if (self->channels != 3 && self->channels != 4) {
+        PyErr_Format(PyExc_ValueError, "channels is expected to be 3 or 4, but got (%u)!", self->channels);
         goto error;
     }
 
@@ -112,7 +112,7 @@ static PyObject *QOIImage_repr(QOIImageObject *self) {
         return NULL;
 
     Py_ReprLeave((PyObject *) self);
-    return PyUnicode_FromFormat("QOIImage(width=%u, height=%u, chanels=%u, colorspace=%u)", self->width, self->height, self->chanels, self->colorspace);
+    return PyUnicode_FromFormat("QOIImage(width=%u, height=%u, channels=%u, colorspace=%u)", self->width, self->height, self->channels, self->colorspace);
 }
 
 bool copy_cimage_to_pyimage(QOIImageObject *py_image, qoi_image *c_image) {
@@ -121,7 +121,7 @@ bool copy_cimage_to_pyimage(QOIImageObject *py_image, qoi_image *c_image) {
     
     py_image->width      = c_image->header.width;
     py_image->height     = c_image->header.height;
-    py_image->chanels    = c_image->header.chanels;
+    py_image->channels   = c_image->header.channels;
     py_image->colorspace = c_image->header.colorspace;
 
     uint64_t pixel_count = py_image->width * py_image->height;
@@ -168,7 +168,7 @@ bool copy_pyimage_to_cimage(qoi_image *c_image, QOIImageObject *py_image) {
     
     c_image->header.width      = py_image->width;
     c_image->header.height     = py_image->height;
-    c_image->header.chanels    = py_image->chanels;
+    c_image->header.channels   = py_image->channels;
     c_image->header.colorspace = py_image->colorspace;
 
     uint64_t pixel_count = c_image->header.width * c_image->header.height;

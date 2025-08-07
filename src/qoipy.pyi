@@ -22,7 +22,7 @@ class QOIImage:
     """Width of the image"""
     height:     int
     """Height of the image"""
-    chanels:    int
+    channels:    int
     """3 = RGB, 4 = RGBA"""
     colorspace: int
     """0 = sRGB with linear alpha, 1 = all channels linear"""
@@ -32,7 +32,7 @@ class QOIImage:
             width: int, 
             height: int, 
             colorspace: typing.Literal[0, 1], 
-            chanels: typing.Literal[3, 4],
+            channels: typing.Literal[3, 4],
             pixels: typing.Sequence[pixel]
         ) -> None: ...
     

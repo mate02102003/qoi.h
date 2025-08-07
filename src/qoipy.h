@@ -52,7 +52,7 @@ typedef struct {
     char          magic[4];
     uint32_t      width;
     uint32_t      height;
-    uint8_t       chanels;
+    uint8_t       channels;
     uint8_t       colorspace;
     PixelObject **pixels;
 } QOIImageObject;
@@ -70,7 +70,7 @@ static PyObject *write_QOIImage(QOIImageObject *self, PyObject *arg);
 static PyMemberDef QOIImage_members[] = {
     {"width",      Py_T_UINT , offsetof(QOIImageObject, width),      0, "Width of the image"},
     {"height",     Py_T_UINT , offsetof(QOIImageObject, height),     0, "Height of the image"},
-    {"chanels",    Py_T_UBYTE, offsetof(QOIImageObject, chanels),    0, "3 = RGB, 4 = RGBA"},
+    {"channels",   Py_T_UBYTE, offsetof(QOIImageObject, channels),   0, "3 = RGB, 4 = RGBA"},
     {"colorspace", Py_T_UBYTE, offsetof(QOIImageObject, colorspace), 0, "0 = sRGB with linear alpha, 1 = all channels linear"},
     {NULL}  /* Sentinel */
 };
