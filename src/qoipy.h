@@ -102,3 +102,5 @@ static struct PyModuleDef qoipy_module = {
     .m_name = "qoipy",
     .m_doc = "Python bindings for header-only QOI format implementation",
 };
+
+PyMODINIT_FUNC PyInit_qoipy(void);
