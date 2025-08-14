@@ -67,6 +67,10 @@ static PyObject *load_QOIImage(PyObject *Py_UNUSED(self), PyObject *arg);
 
 static PyObject *write_QOIImage(QOIImageObject *self, PyObject *arg);
 
+static PyObject *get_pixel_QOIImage(QOIImageObject *self, PyObject *args, PyObject *kwargs);
+
+static PyObject *set_pixel_QOIImage(QOIImageObject *self, PyObject *args, PyObject *kwargs);
+
 static PyMemberDef QOIImage_members[] = {
     {"width",      Py_T_UINT , offsetof(QOIImageObject, width),      0, "Width of the image"},
     {"height",     Py_T_UINT , offsetof(QOIImageObject, height),     0, "Height of the image"},
@@ -76,8 +80,10 @@ static PyMemberDef QOIImage_members[] = {
 };
 
 static PyMethodDef QOIImage_methods[] = {
-    {"load" ,               load_QOIImage, METH_O | METH_STATIC, "Load QOI from file!"},
-    {"write", (PyCFunction)write_QOIImage, METH_O              , "Write QOI to file!" },
+    {"load"     ,                   load_QOIImage, METH_STATIC | METH_O                      , "Load QOI from file!"       },
+    {"write"    , (PyCFunction)    write_QOIImage,               METH_O                      , "Write QOI to file!"        },
+    {"get_pixel", (PyCFunction)get_pixel_QOIImage,               METH_VARARGS | METH_KEYWORDS, "Get a pixel from the image"},
+    {"set_pixel", (PyCFunction)set_pixel_QOIImage,               METH_VARARGS | METH_KEYWORDS, "Set a pixel in the image"  },
     {NULL}  /* Sentinel */
 };
 

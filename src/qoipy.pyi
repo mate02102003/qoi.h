@@ -44,3 +44,9 @@ class QOIImage:
 
     def write(self: typing.Self, filepath: str) -> "QOIImage":
         """Write QOI to file!"""
+
+    def get_pixel(self: typing.Self, x: int, y: int) -> pixel:
+        """Get a pixel from the image"""
+
+    def set_pixel(self: typing.Self, x: int, y: int, pixel: pixel) -> None:
+        """Set a pixel in the image"""

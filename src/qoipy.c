@@ -99,8 +99,7 @@ static void QOIImage_dealloc(QOIImageObject *self) {
     uint64_t pixel_count = self->width * self->height;
     if (self->pixels != NULL) {
         for(uint64_t i = 0; i < pixel_count; ++i)
-            if (self->pixels[i] != NULL)
-                Py_XDECREF(self->pixels[i]);
+            Py_XDECREF(self->pixels[i]);
     
         PyMem_Free(self->pixels);
     }
@@ -201,6 +200,55 @@ static PyObject *write_QOIImage(QOIImageObject *self, PyObject *arg) {
     Py_RETURN_NONE;
 error:
     qoi_free_image(&c_image);
+    return NULL;
+}
+
+static PyObject *get_pixel_QOIImage(QOIImageObject *self, PyObject *args, PyObject *kwargs) {
+    static char *kwlist[] = { "x", "y", NULL };
+
+    uint32_t x, y;
+    if (!PyArg_ParseTupleAndKeywords(args, kwargs, "kk", kwlist, &x, &y))
+        goto error;
+    
+    if (x > self->width) {
+        PyErr_Format(PyExc_ValueError, "x must be between 0 and width (%k), 0 included!", self->width);
+        goto error;
+    }
+    if (y > self->height) {
+        PyErr_Format(PyExc_ValueError, "y must be between 0 and height (%k), 0 included!", self->height);
+        goto error;
+    }
+    
+    Py_INCREF(self->pixels[x + self->width * y]);
+    return (PyObject *)self->pixels[x + self->width * y];
+error:
+    return NULL;
+}
+
+static PyObject *set_pixel_QOIImage(QOIImageObject *self, PyObject *args, PyObject *kwargs) {
+    static char *kwlist[] = { "x", "y", "pixel", NULL };
+
+    uint32_t x, y;
+    PyObject *pixel;
+    if (!PyArg_ParseTupleAndKeywords(args, kwargs, "kkO", kwlist, &x, &y, &pixel))
+        goto error;
+
+    if (x > self->width) {
+        PyErr_Format(PyExc_ValueError, "x must be between 0 and width (%k), 0 included!", self->width);
+        goto error;
+    }
+    if (y > self->height) {
+        PyErr_Format(PyExc_ValueError, "y must be between 0 and height (%k), 0 included!", self->height);
+        goto error;
+    }
+    if (!Py_IS_TYPE(pixel, &PixelType)) {
+        PyErr_Format(PyExc_TypeError, "pixel must be qoipy.pixel!");
+        goto error;
+    }
+
+    self->pixels[x + self->width * y] = (PixelObject *)Py_NewRef(pixel);
+    Py_RETURN_NONE;
+error:
     return NULL;
 }
 
