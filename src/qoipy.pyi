@@ -48,5 +48,8 @@ class QOIImage:
     def get_pixel(self: typing.Self, x: int, y: int) -> pixel:
         """Get a pixel from the image"""
 
+    def get_pixels(self: typing.Self) -> tuple[pixel]:
+        """Get pixels from the image"""
+
     def set_pixel(self: typing.Self, x: int, y: int, pixel: pixel) -> None:
         """Set a pixel in the image"""

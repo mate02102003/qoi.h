@@ -225,6 +225,27 @@ error:
     return NULL;
 }
 
+static PyObject *get_pixels_QOIImage(QOIImageObject *self, PyObject *Py_UNUSED(args)) {
+    uint64_t pixel_count = self->width * self->height;
+    PyObject *pixels = PyTuple_New(pixel_count);
+
+    if (pixels == NULL) {
+        PyErr_Format(PyExc_ValueError, "Couldn't create tuple for pixels!");
+        goto error;
+    }
+
+    uint64_t i;
+    for (i = 0; i < pixel_count; ++i) {
+        if (PyTuple_SetItem(pixels, i, (PyObject *)self->pixels[i]) < 0)
+            goto error;
+    }
+
+    return pixels;
+error:
+    Py_XDECREF(pixels);
+    return NULL;
+}
+
 static PyObject *set_pixel_QOIImage(QOIImageObject *self, PyObject *args, PyObject *kwargs) {
     static char *kwlist[] = { "x", "y", "pixel", NULL };
 
