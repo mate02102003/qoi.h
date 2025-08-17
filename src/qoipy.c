@@ -238,6 +238,7 @@ static PyObject *get_pixels_QOIImage(QOIImageObject *self, PyObject *Py_UNUSED(a
     for (i = 0; i < pixel_count; ++i) {
         if (PyTuple_SetItem(pixels, i, (PyObject *)self->pixels[i]) < 0)
             goto error;
+        Py_INCREF(self->pixels[i]);
     }
 
     return pixels;
